@@ -113,7 +113,9 @@ a{color:var(--accent)}.auth{max-width:380px;margin:7vh auto}.err{color:var(--bad
     return t;
   }
 
-  var PARAMS_PADRAO = { cenario: 'tcu', cbs: 11.3, ibs: 18.7, redutorCbs: true, creditoSimples: 30, excluirIcmsPisCofins: true, patronalPadrao: 28.8 };
+  var PARAMS_PADRAO = { cenario: 'tcu', cbs: 11.3, ibs: 18.7, redutorCbs: true, creditoSimples: 30, excluirIcmsPisCofins: true, patronalPadrao: 28.8,
+    // Majoração das presunções do Lucro Presumido: LC 224/2025 (+10% em 2026) e LC 239/2026 (+20% a partir de 2027), só sobre a receita acima do limite
+    majPresumido: true, majPres2026: 10, majPres2027: 20, limiteMaj: 5000000 };
 
   // ---------- Empresa ----------
   var TIPOS = {
@@ -206,9 +208,12 @@ a{color:var(--accent)}.auth{max-width:380px;margin:7vh auto}.err{color:var(--bad
     // ---- Lucro Presumido ----
     var pcPres = 0;
     if (t.pisCofins) { var baseP = rev - (p.excluirIcmsPisCofins ? icmsDeb : 0); pcPres = r2(baseP * 0.0365); }
-    var presIr = irpjCsll(rev * tp.pres[0] / 100, rev * tp.pres[1] / 100);
+    // LC 224/2025 e LC 239/2026: acréscimo relativo nos percentuais de presunção sobre a parcela da receita acima do limite anual
+    var maj = p.majPresumido ? (y >= 2027 ? p.majPres2027 : p.majPres2026) / 100 : 0, lim = p.limiteMaj, exc = Math.max(0, rev - lim);
+    var baseP = function (pc) { return (Math.min(rev, lim) * pc / 100) + exc * pc / 100 * (1 + maj); };
+    var presIr = irpjCsll(baseP(tp.pres[0]), baseP(tp.pres[1]));
     var tPres = presIr.irpj + presIr.csll + pcPres + icmsLiq + issLiq + reg2.cbs + reg2.ibs + cppFora;
-    out.regimes.presumido = { total: tPres, irpj: presIr.irpj, csll: presIr.csll, pisCofins: pcPres, cbs: reg2.cbs, ibs: reg2.ibs, icms: icmsLiq, iss: issLiq, cpp: cppFora, elegivel: true };
+    out.regimes.presumido = { majoracao: exc * maj * (tp.pres[0] + tp.pres[1]) / 100, total: tPres, irpj: presIr.irpj, csll: presIr.csll, pisCofins: pcPres, cbs: reg2.cbs, ibs: reg2.ibs, icms: icmsLiq, iss: issLiq, cpp: cppFora, elegivel: true };
 
     // ---- Lucro Real ----
     var pcReal = 0;
@@ -477,12 +482,13 @@ function viewPremissas0(){
   '<div class="grid g4" style="margin-top:8px"><label>Crédito de compras do Simples (% do crédito cheio)<input data-p="creditoSimples" type="number" value="'+p.creditoSimples+'"></label><label>Encargos patronais padrão (%)<input data-p="patronalPadrao" type="number" step="0.1" value="'+p.patronalPadrao+'"></label>'+
   '<label>Redutor de 0,1 p.p. na CBS em 2027–28<select data-p="redutorCbs"><option value="1"'+(p.redutorCbs?' selected':'')+'>Sim</option><option value="0"'+(!p.redutorCbs?' selected':'')+'>Não</option></select></label>'+
   '<label>Excluir ICMS da base de PIS/Cofins (Tema 69)<select data-p="excluirIcmsPisCofins"><option value="1"'+(p.excluirIcmsPisCofins?' selected':'')+'>Sim</option><option value="0"'+(!p.excluirIcmsPisCofins?' selected':'')+'>Não</option></select></label></div></div>'+
+  '<div class="card"><h2>Lucro Presumido — majoração das presunções (LC 224/2025 e LC 239/2026)</h2><div class="grid g4"><label>Aplicar majoração<select data-p="majPresumido"><option value="1"'+(p.majPresumido?' selected':'')+'>Sim</option><option value="0"'+(!p.majPresumido?' selected':'')+'>Não</option></select></label><label>Acréscimo em 2026 (%) — LC 224<input data-p="majPres2026" type="number" step="1" value="'+p.majPres2026+'"></label><label>Acréscimo a partir de 2027 (%) — LC 239<input data-p="majPres2027" type="number" step="1" value="'+p.majPres2027+'"></label><label>Majora a receita acima de (R$/ano)<input data-p="limiteMaj" type="number" step="1000" value="'+p.limiteMaj+'"></label></div><p class="note">O acréscimo é relativo (ex.: serviços 32% → 35,2% com +10% e 38,4% com +20%) e incide só sobre a receita anual que excede o limite. Simplificações: aplicado ao ano inteiro (a CSLL só passa a valer a partir de abril/2026 e de março/2027) e sem exceções por atividade. Confirme o limite e a vigência de 2027 na regulamentação.</p></div>'+
   '<div class="card"><h2>Cronograma resultante</h2><div class="tw"><table><tr><th>Ano</th><th>CBS</th><th>IBS</th><th>PIS/Cofins</th><th>ICMS/ISS restante</th></tr>'+rows+'</table></div></div>'}
 
 function viewMetodo(){return '<div class="card"><h2>Base normativa e fontes</h2><ul class="plan">'+
  '<li><a href="https://www.gov.br/receitafederal/pt-br/assuntos/noticias/2026/novembro/receita-federal-publica-primeiro-codigo-fonte-aberto-no-github-e-amplia-transparencia-da-reforma-tributaria" target="_blank" rel="noopener">Receita Federal — código-fonte aberto da Calculadora de Tributos (nov/2026)</a>, Portaria Cotec nº 342/2026, licença MIT.</li>'+
  '<li>Repositórios: <code>ReceitaFederal/calculadora-rtc-regime-regular</code> (CBS, IBS e IS — LC 214/2025) e <code>ReceitaFederal/calculadora-rtc-simples-nacional</code>.</li>'+
- '<li>LC 123/2006 (Anexos I–V do Simples e Fator R); LC 214/2025 (CBS/IBS, cronograma de transição, art. 349 — alíquotas de referência); TCU, 28/10/2026 (CBS 2027 = 11,3%).</li></ul>'+
+ '<li>LC 224/2025 (art. 4º, §4º, VII e §5º): +10% nos percentuais de presunção do Lucro Presumido sobre a receita acima de R$ 5 milhões; LC 239/2026 (24/11/2026): eleva o acréscimo para 20% a partir de 2027.</li><li>LC 123/2006 (Anexos I–V do Simples e Fator R); LC 214/2025 (CBS/IBS, cronograma de transição, art. 349 — alíquotas de referência); TCU, 28/10/2026 (CBS 2027 = 11,3%).</li></ul>'+
  '<h3>O que foi reaproveitado da Calculadora oficial</h3><ul class="plan"><li>Fórmula do tributo: <code>valor = base × alíquota × (1 − redução)</code> — exemplo da documentação (R$ 1.200, CBS 8,8%, redução 60% → R$ 42,24) reproduzido em teste.</li><li>Arredondamento HALF_EVEN em 2 casas.</li><li>2026 = fase de teste (0,9% CBS + 0,1% IBS); a partir de 2027 as alíquotas são informadas (aqui, pelos cenários).</li><li>A calculadora oficial calcula por documento fiscal; este simulador agrega a carga anual por regime. Use o botão “Gerar modelo para Calculadora RTC” para conferir uma operação.</li></ul>'+
  '<h3>Simplificações — leia antes de decidir</h3><ul class="plan"><li>Cálculo anual (sem apuração trimestral/mensal, adicional de IR sobre 240 mil/ano). Verifique também mudanças recentes nos percentuais de presunção.</li><li>Simples: alíquota efetiva pela fórmula da LC 123 para a RBT12 informada (crescendo conforme a taxa de crescimento). Partição do DAS usa os percentuais da 1ª faixa de cada anexo como aproximação para as demais faixas. Sublimite de R$ 3,6 mi não modelado.</li><li>Simples sem mudança de carga na transição; a parcela de PIS/Cofins/IPI/ICMS/ISS do DAS passa a representar CBS/IBS (define o crédito ao cliente). No regime regular “híbrido” a parcela correspondente sai do DAS e o IBS/CBS é apurado por débito − crédito.</li><li>Créditos de IBS/CBS: sobre aquisições informadas, com fator reduzido para fornecedores do Simples (premissa editável). Saldo credor reduz a carga.</li><li>ICMS: débito − crédito sobre as compras; ISS sem crédito; reduções do ICMS/ISS conforme cronograma 2029–2033.</li><li>Imposto Seletivo, regimes específicos, Zona Franca, benefícios fiscais e tributação de dividendos não modelados.</li><li>Alíquotas de referência de 2027 em diante são premissas editáveis, ainda não definitivas.</li></ul>'+
  '<h3>Segurança do login</h3><ul class="plan"><li>O cadastro de usuários e o login funcionam <b>somente neste navegador</b>: as senhas são guardadas com hash (PBKDF2-SHA256, 210 mil iterações, salt individual), nunca em texto puro. Não há servidor; quem tiver acesso ao computador/navegador ou ao arquivo pode contornar a tela de login. Para proteção real entre pessoas diferentes, use a versão com servidor.</li><li>Sem recuperação de senha: se o master esquecer a senha, a única saída é limpar os dados do site no navegador (o que apaga usuários e empresas). Faça backup pelo botão Exportar.</li></ul>'+
@@ -592,7 +598,7 @@ document.addEventListener('change',function(ev){var t=ev.target;var df=t.getAttr
   if(t.hasAttribute('data-sh')){if(!isM())return;var es=S.empresas.filter(function(x){return x.id===S.share})[0];if(es){var c=es.compart||[],uid2=t.getAttribute('data-sh'),i=c.indexOf(uid2);if(t.checked&&i<0)c.push(uid2);if(!t.checked&&i>=0)c.splice(i,1);es.compart=c;save();render()}return}
   if(t.getAttribute('data-p')&&!isM())return;
   if(t.getAttribute('data-act')==='selemp'){S.sel=t.value;save();render();return}
-  var p=t.getAttribute('data-p');if(p){var v=t.value;if(p==='redutorCbs'||p==='excluirIcmsPisCofins')v=v==='1';else if(p==='cenario'){var c=M.CENARIOS[v];S.params.cenario=v;if(v!=='custom'){S.params.cbs=c.cbs;S.params.ibs=c.ibs}render();save();return}else{v=parseFloat(v);if(!isFinite(v))return;if(p==='cbs'||p==='ibs')S.params.cenario='custom'}S.params[p]=v;save();render()}
+  var p=t.getAttribute('data-p');if(p){var v=t.value;if(p==='redutorCbs'||p==='excluirIcmsPisCofins'||p==='majPresumido')v=v==='1';else if(p==='cenario'){var c=M.CENARIOS[v];S.params.cenario=v;if(v!=='custom'){S.params.cbs=c.cbs;S.params.ibs=c.ibs}render();save();return}else{v=parseFloat(v);if(!isFinite(v))return;if(p==='cbs'||p==='ibs')S.params.cenario='custom'}S.params[p]=v;save();render()}
 });
 document.addEventListener('submit',function(ev){ev.preventDefault();var f=ev.target,id=f.id,v=function(n){return f.elements[n]?f.elements[n].value:''};
   function fail(m){S.authErr=m;render()}
