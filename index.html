@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulador de Planejamento Tributário — Reforma Tributária</title>
+<style>
+:root{color-scheme:light;--bg:#f6f6f4;--surface:#fcfcfb;--ink:#0b0b0b;--ink2:#52514e;--muted:#7a7975;--line:#e3e2de;--accent:#256abf;--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#6250d6;--good:#0b7a43;--warn:#a86400;--bad:#c0302f;--chip:#eceae6}
+@media (prefers-color-scheme:dark){:root{color-scheme:dark;--bg:#121211;--surface:#1a1a19;--ink:#f0efec;--ink2:#c3c2b7;--muted:#98978f;--line:#2d2d2b;--accent:#6da7ec;--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#9085e9;--good:#4cc38a;--warn:#e3a53a;--bad:#ee7a79;--chip:#262624}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{padding:16px 16px 0;max-width:1100px;margin:0 auto}h1{font-size:20px;margin:0 0 2px}.sub{color:var(--ink2);font-size:13px}
+nav{display:flex;gap:4px;overflow-x:auto;padding:12px 16px 0;max-width:1100px;margin:0 auto;border-bottom:1px solid var(--line)}
+nav button{background:none;border:0;border-bottom:2px solid transparent;padding:8px 12px;color:var(--ink2);font:inherit;cursor:pointer;white-space:nowrap}
+nav button.on{color:var(--ink);border-color:var(--accent);font-weight:600}
+main{max-width:1100px;margin:0 auto;padding:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+.card h2{font-size:15px;margin:0 0 8px}.card h3{font-size:13px;margin:12px 0 4px;color:var(--ink2)}
+.grid{display:grid;gap:10px}.g2{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}.g4{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+label{display:block;font-size:12px;color:var(--ink2)}input,select,textarea{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 8px;margin-top:2px}
+textarea{min-height:140px;font-family:ui-monospace,Menlo,monospace;font-size:12px}
+button.b{background:var(--accent);color:#fff;border:0;border-radius:6px;padding:8px 12px;font:inherit;cursor:pointer}button.b.sec{background:var(--chip);color:var(--ink)}button.b.dng{background:var(--bad)}button.b.sm{padding:4px 8px;font-size:12px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.sp{flex:1}
+.tw{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}th:first-child,td:first-child{text-align:left}th{color:var(--ink2);font-weight:600}
+tr.best td.v{font-weight:700}td.na{color:var(--muted)}
+.kpi{background:var(--bg);border-radius:8px;padding:10px}.kpi .l{font-size:12px;color:var(--ink2)}.kpi .n{font-size:20px;font-weight:700;margin-top:2px}.kpi .d{font-size:12px;color:var(--ink2)}
+.good{color:var(--good)}.warn{color:var(--warn)}.bad{color:var(--bad)}
+.chip{display:inline-block;background:var(--chip);border-radius:999px;padding:2px 8px;font-size:12px}
+ul.plan{margin:6px 0 0;padding-left:18px}ul.plan li{margin:6px 0}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink2);margin:4px 0}.legend i{display:inline-block;width:18px;height:0;border-top:3px solid;vertical-align:middle;margin-right:5px}
+.chartwrap{position:relative}svg text{fill:var(--ink2);font-size:11px}.tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:12px;box-shadow:0 2px 8px #0003;display:none;z-index:5;white-space:nowrap}
+.note{font-size:12px;color:var(--ink2)}.warnbox{border-left:3px solid var(--warn);padding:6px 10px;background:var(--bg);margin:8px 0;font-size:13px}
+a{color:var(--accent)}.auth{max-width:380px;margin:7vh auto}.err{color:var(--bad);font-size:13px;margin:6px 0}.ok{color:var(--good);font-size:13px;margin:6px 0}.badge{display:inline-block;border-radius:999px;padding:1px 8px;font-size:11px;background:var(--chip)}code{background:var(--chip);padding:1px 4px;border-radius:4px;font-size:12px}
+
+.printonly{display:none}
+@media print{
+ :root{color-scheme:light;--bg:#fff;--surface:#fff;--ink:#000;--ink2:#333;--muted:#555;--line:#bbb;--chip:#eee}
+ body{background:#fff;font-size:11px}nav,#userbar,.noprint,button,.tip,.toast,select,input[type=file]{display:none!important}
+ header{padding:0}.sub{display:none}.printonly{display:block}main{max-width:none;padding:0}
+ .card{break-inside:avoid;border:1px solid #bbb;box-shadow:none}.tw{overflow:visible}table{font-size:10px}
+ *{-webkit-print-color-adjust:exact;print-color-adjust:exact}a{color:#000;text-decoration:none}
+ @page{size:A4 landscape;margin:12mm}
+}
+</style>
+</head>
+<body>
+<header><h1>Simulador de Planejamento Tributário</h1>
+<div class="sub">Simples × Presumido × Real × Simples com IBS/CBS regular — transição da Reforma Tributária 2026–2033. Baseado nas regras da Calculadora RTC da Receita Federal (código aberto, MIT).</div><div id="userbar" class="note" style="margin-top:6px"></div></header>
+<nav id="nav"></nav>
+<main id="main"></main>
+<div class="tip" id="tip"></div>
+<script>
+/* Motor de cálculo — Simulador de Planejamento Tributário (Simples / Presumido / Real + transição CBS/IBS)
+   Lógica de CBS/IBS espelha a Calculadora RTC da Receita Federal: vTrib = vBC × pAliq × (1 − pRedAliq/100),
+   arredondamento HALF_EVEN. Premissas e simplificações estão documentadas na aba "Metodologia". */
+(function (root) {
+  'use strict';
+
+  // ---------- util ----------
+  function r2(x) { // HALF_EVEN, 2 casas (mesma política da calculadora oficial)
+    var s = x * 100, f = Math.floor(s), d = s - f, eps = 1e-9;
+    var v;
+    if (Math.abs(d - 0.5) < eps) v = (f % 2 === 0) ? f : f + 1; else v = Math.round(s);
+    return v / 100;
+  }
+  var YEARS = [2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033];
+
+  // ---------- Simples Nacional: LC 123/2006, Anexos I–V (faixas: [teto RBT12, alíq. nominal, parcela a deduzir]) ----------
+  var ANEXOS = {
+    I:   { nome: 'Anexo I — Comércio', faixas: [[180000,.04,0],[360000,.073,5940],[720000,.095,13860],[1800000,.107,22500],[3600000,.143,87300],[4800000,.19,378000]],
+           part: { irpj:5.5, csll:3.5, cofins:12.74, pis:2.76, cpp:41.5, icms:34, iss:0, ipi:0 } },
+    II:  { nome: 'Anexo II — Indústria', faixas: [[180000,.045,0],[360000,.078,5940],[720000,.10,13860],[1800000,.112,22500],[3600000,.147,85500],[4800000,.30,720000]],
+           part: { irpj:5.5, csll:3.5, cofins:11.51, pis:2.49, cpp:37.5, icms:32, iss:0, ipi:7.5 } },
+    III: { nome: 'Anexo III — Serviços', faixas: [[180000,.06,0],[360000,.112,9360],[720000,.135,17640],[1800000,.16,35640],[3600000,.21,125640],[4800000,.33,648000]],
+           part: { irpj:4, csll:3.5, cofins:12.82, pis:2.78, cpp:43.4, icms:0, iss:33.5, ipi:0 } },
+    IV:  { nome: 'Anexo IV — Serviços (CPP fora do DAS)', faixas: [[180000,.045,0],[360000,.09,8100],[720000,.102,12420],[1800000,.14,39780],[3600000,.22,183780],[4800000,.33,828000]],
+           part: { irpj:18.8, csll:15.2, cofins:17.67, pis:3.83, cpp:0, icms:0, iss:44.5, ipi:0 } },
+    V:   { nome: 'Anexo V — Serviços (Fator R < 28%)', faixas: [[180000,.155,0],[360000,.18,4500],[720000,.195,9900],[1800000,.205,17100],[3600000,.23,62100],[4800000,.305,540000]],
+           part: { irpj:25, csll:15, cofins:14.1, pis:3.05, cpp:28.85, icms:0, iss:14, ipi:0 } }
+  };
+  var LIMITE_SN = 4800000, SUBLIMITE_SN = 3600000;
+
+  function simplesEfetiva(rbt12, anexo) {
+    var A = ANEXOS[anexo], f = A.faixas, i;
+    if (rbt12 > LIMITE_SN) return null;
+    for (i = 0; i < f.length; i++) if (rbt12 <= f[i][0]) break;
+    var fx = f[i];
+    if (rbt12 <= 0) return { aliq: f[0][1], nominal: f[0][1], faixa: 1 };
+    return { aliq: (rbt12 * fx[1] - fx[2]) / rbt12, nominal: fx[1], faixa: i + 1 };
+  }
+
+  // ---------- Cenários de alíquotas de referência ----------
+  var CENARIOS = {
+    tcu: { nome: 'TCU 2027 (CBS 11,3%) + estimativa CGIBS do IBS (18,7%)', cbs: 11.3, ibs: 18.7 },
+    lc214: { nome: 'Referência original LC 214/2025 (CBS 8,8% + IBS 17,7%)', cbs: 8.8, ibs: 17.7 },
+    custom: { nome: 'Personalizado', cbs: 11.3, ibs: 18.7 }
+  };
+  // Cronograma LC 214/2025: IBS 0,1% em 2027–28; 2029–32 = 10/20/30/40% do IBS pleno (ICMS/ISS reduzidos na mesma proporção); 2033 = 100%.
+  var FRAC_IBS = { 2026: 0, 2027: 0, 2028: 0, 2029: .1, 2030: .2, 2031: .3, 2032: .4, 2033: 1 };
+
+  function taxasAno(y, p) {
+    var t = { ano: y, cbs: 0, ibs: 0, fracIcmsIss: 1, pisCofins: true, teste: false };
+    if (y <= 2026) { t.teste = true; return t; } // 2026: teste 0,9% CBS + 0,1% IBS, compensado — sem carga líquida adicional
+    t.pisCofins = false;
+    if (y <= 2028) { t.cbs = p.cbs - (p.redutorCbs ? 0.1 : 0); t.ibs = 0.1; t.fracIcmsIss = 1; }
+    else { t.cbs = p.cbs; t.ibs = p.ibs * FRAC_IBS[y]; t.fracIcmsIss = 1 - FRAC_IBS[y]; }
+    return t;
+  }
+
+  var PARAMS_PADRAO = { cenario: 'tcu', cbs: 11.3, ibs: 18.7, redutorCbs: true, creditoSimples: 30, excluirIcmsPisCofins: true, patronalPadrao: 28.8 };
+
+  // ---------- Empresa ----------
+  var TIPOS = {
+    comercio:  { nome: 'Comércio', anexo: 'I', ci: true, pres: [8, 12] },
+    industria: { nome: 'Indústria', anexo: 'II', ci: true, pres: [8, 12] },
+    serv3:     { nome: 'Serviços (Anexo III)', anexo: 'III', ci: false, pres: [32, 32] },
+    serv4:     { nome: 'Serviços (Anexo IV)', anexo: 'IV', ci: false, pres: [32, 32] },
+    servR:     { nome: 'Serviços (Anexo III/V — Fator R)', anexo: 'R', ci: false, pres: [32, 32] }
+  };
+
+  function normaliza(e) {
+    function n(v, d) { v = parseFloat(v); return isFinite(v) ? v : d; }
+    return {
+      id: e.id, razao: e.razao || '', cnpj: e.cnpj || '', im: e.im || '', uf: e.uf || '', municipio: e.municipio || '', ibge: e.ibge || '',
+      regimeAtual: e.regimeAtual || 'simples', tipo: TIPOS[e.tipo] ? e.tipo : 'comercio',
+      receita: n(e.receita, 0), folha: n(e.folha, 0), compras: n(e.compras, 0), despesas: n(e.despesas, 0),
+      pctB2B: n(e.pctB2B, 0), pctFornSimples: n(e.pctFornSimples, 0),
+      aliqIcms: n(e.aliqIcms, 18), aliqIss: n(e.aliqIss, 5), reducao: n(e.reducao, 0),
+      crescimento: n(e.crescimento, 0), patronal: n(e.patronal, NaN)
+    };
+  }
+
+  function anexoDe(e, rev, folha) {
+    var t = TIPOS[e.tipo];
+    if (t.anexo !== 'R') return { anexo: t.anexo, fatorR: null };
+    var fr = rev > 0 ? folha / rev : 0;
+    return { anexo: fr >= 0.28 ? 'III' : 'V', fatorR: fr };
+  }
+
+  // IBS/CBS pelo regime regular (Presumido, Real e Simples que opta pelo regime regular)
+  function ibsCbsRegular(e, rev, compras, t, p) {
+    var aliq = (t.cbs + t.ibs) / 100;
+    var red = 1 - e.reducao / 100;
+    var cbsDeb = r2(rev * (t.cbs / 100) * red), ibsDeb = r2(rev * (t.ibs / 100) * red);
+    var fs = e.pctFornSimples / 100, f = p.creditoSimples / 100;
+    var credFactor = (1 - fs) + fs * f;
+    var cbsCred = r2(compras * credFactor * (t.cbs / 100)), ibsCred = r2(compras * credFactor * (t.ibs / 100));
+    return { cbs: cbsDeb - cbsCred, ibs: ibsDeb - ibsCred, cbsDeb: cbsDeb, ibsDeb: ibsDeb, cbsCred: cbsCred, ibsCred: ibsCred, aliq: aliq };
+  }
+
+  function irpjCsll(baseIr, baseCs) {
+    var ir = Math.max(0, baseIr), cs = Math.max(0, baseCs);
+    return { irpj: r2(ir * .15 + Math.max(0, ir - 240000) * .10), csll: r2(cs * .09) };
+  }
+
+  function simulaAno(e0, y, p) {
+    var e = normaliza(e0), t = taxasAno(y, p), g = Math.pow(1 + e.crescimento / 100, y - 2026);
+    var rev = e.receita * g, folha = e.folha * g, compras = e.compras * g, desp = e.despesas * g;
+    var tp = TIPOS[e.tipo], ci = tp.ci;
+    var patr = isFinite(e.patronal) ? e.patronal : p.patronalPadrao;
+    var cppFora = r2(folha * patr / 100);
+    var out = { ano: y, receita: rev, folha: folha, taxas: t, regimes: {} };
+
+    // ---- Simples Nacional (padrão) ----
+    var an = anexoDe(e, rev, folha), ef = simplesEfetiva(rev, an.anexo);
+    out.anexo = an.anexo; out.fatorR = an.fatorR;
+    if (ef) {
+      var das = r2(rev * ef.aliq), cppSN = (an.anexo === 'IV') ? cppFora : 0;
+      var part = ANEXOS[an.anexo].part;
+      var shPC = (part.pis + part.cofins) / 100, shIcmsIss = (part.icms + part.iss) / 100, shIpi = part.ipi / 100;
+      // parcela do DAS que equivale a IBS/CBS a partir de 2027 (crédito ao cliente B2B)
+      var shIbsCbs = 0;
+      if (y >= 2027) shIbsCbs = shPC + shIpi + shIcmsIss * (1 - t.fracIcmsIss);
+      var credSN = r2(rev * (e.pctB2B / 100) * ef.aliq * shIbsCbs);
+      out.regimes.simples = { total: das + cppSN, das: das, cpp: cppSN, aliqEfetiva: ef.aliq, faixa: ef.faixa, creditoCliente: credSN, elegivel: true };
+
+      // ---- Simples + regime regular de IBS/CBS (a partir de 2027) ----
+      if (y >= 2027) {
+        var excl = shPC + shIpi + shIcmsIss * (1 - t.fracIcmsIss);
+        var dasH = r2(das * (1 - excl)), reg = ibsCbsRegular(e, rev, compras, t, p);
+        out.regimes.hibrido = { total: dasH + cppSN + reg.cbs + reg.ibs, das: dasH, cpp: cppSN, cbs: reg.cbs, ibs: reg.ibs, elegivel: true };
+      }
+    } else {
+      out.regimes.simples = { total: null, elegivel: false, motivo: 'Receita acima de R$ 4,8 milhões' };
+      if (y >= 2027) out.regimes.hibrido = { total: null, elegivel: false };
+    }
+
+    // ---- tributos indiretos "antigos" (ICMS/ISS e PIS/Cofins) ----
+    var icmsLiq = 0, issLiq = 0;
+    if (ci) icmsLiq = (rev - compras) * (e.aliqIcms / 100) * t.fracIcmsIss;
+    else issLiq = rev * (e.aliqIss / 100) * t.fracIcmsIss;
+    icmsLiq = r2(icmsLiq); issLiq = r2(issLiq);
+    var icmsDeb = ci ? rev * e.aliqIcms / 100 : 0;
+    var reg2 = (y >= 2026 && !t.pisCofins) ? ibsCbsRegular(e, rev, compras, t, p) : { cbs: 0, ibs: 0 };
+
+    // ---- Lucro Presumido ----
+    var pcPres = 0;
+    if (t.pisCofins) { var baseP = rev - (p.excluirIcmsPisCofins ? icmsDeb : 0); pcPres = r2(baseP * 0.0365); }
+    var presIr = irpjCsll(rev * tp.pres[0] / 100, rev * tp.pres[1] / 100);
+    var tPres = presIr.irpj + presIr.csll + pcPres + icmsLiq + issLiq + reg2.cbs + reg2.ibs + cppFora;
+    out.regimes.presumido = { total: tPres, irpj: presIr.irpj, csll: presIr.csll, pisCofins: pcPres, cbs: reg2.cbs, ibs: reg2.ibs, icms: icmsLiq, iss: issLiq, cpp: cppFora, elegivel: true };
+
+    // ---- Lucro Real ----
+    var pcReal = 0;
+    if (t.pisCofins) {
+      var baseD = rev - (p.excluirIcmsPisCofins ? icmsDeb : 0);
+      var baseC = compras * (ci ? (1 - e.aliqIcms / 100) : 1);
+      pcReal = r2(baseD * 0.0925 - baseC * 0.0925);
+    }
+    var indiretos = icmsLiq + issLiq + pcReal + reg2.cbs + reg2.ibs;
+    var lucro = rev - indiretos - compras - desp - folha - cppFora;
+    var realIr = irpjCsll(lucro, lucro);
+    var tReal = realIr.irpj + realIr.csll + indiretos + cppFora;
+    out.regimes.real = { total: tReal, irpj: realIr.irpj, csll: realIr.csll, pisCofins: pcReal, cbs: reg2.cbs, ibs: reg2.ibs, icms: icmsLiq, iss: issLiq, cpp: cppFora, lucro: lucro, elegivel: true };
+
+    // ---- melhor opção ----
+    var best = null;
+    Object.keys(out.regimes).forEach(function (k) {
+      var r = out.regimes[k]; if (r.elegivel && r.total != null && (best === null || r.total < out.regimes[best].total)) best = k;
+    });
+    out.melhor = best;
+
+    // ---- crédito perdido pelo cliente B2B (Simples padrão × regime regular) ----
+    if (y >= 2027) {
+      var regCred = r2(rev * (e.pctB2B / 100) * (t.cbs + t.ibs) / 100 * (1 - e.reducao / 100));
+      var sc = out.regimes.simples.elegivel ? out.regimes.simples.creditoCliente : 0;
+      out.creditoClienteRegular = regCred; out.creditoClienteSimples = sc; out.creditoPerdido = Math.max(0, regCred - sc);
+    }
+    return out;
+  }
+
+  function simulaEmpresa(e, p) {
+    p = Object.assign({}, PARAMS_PADRAO, p || {});
+    var anos = YEARS.map(function (y) { return simulaAno(e, y, p); });
+    return { empresa: normaliza(e), anos: anos, params: p, otimFatorR: otimizaFatorR(e, p) };
+  }
+
+  // Otimização do Fator R (ano-base 2026): eleva a folha até 28% da receita para migrar do Anexo V ao III
+  function otimizaFatorR(e0, p) {
+    var e = normaliza(e0);
+    if (TIPOS[e.tipo].anexo !== 'R' || e.receita <= 0 || e.receita > LIMITE_SN) return null;
+    var fr = e.folha / e.receita; if (fr >= 0.28) return { aplica: false, fatorR: fr };
+    var efV = simplesEfetiva(e.receita, 'V'), efIII = simplesEfetiva(e.receita, 'III');
+    var necessaria = e.receita * 0.28, extra = necessaria - e.folha;
+    var dasV = r2(e.receita * efV.aliq), dasIII = r2(e.receita * efIII.aliq);
+    // Anexo III já inclui a CPP no DAS; o custo adicional é a própria remuneração (sem patronal fora do DAS).
+    // Atenção: no Anexo V a CPP também está no DAS, portanto não há patronal extra em nenhum dos dois.
+    var economia = dasV - dasIII - extra;
+    return { aplica: true, fatorR: fr, folhaNecessaria: necessaria, folhaExtra: extra, dasV: dasV, dasIII: dasIII, economiaLiquida: economia };
+  }
+
+  // Modelo de payload para a Calculadora RTC oficial (POST /api/calculadora/regime-geral) — conferência pontual
+  function payloadCalculadoraOficial(e0, y, p) {
+    var e = normaliza(e0); p = Object.assign({}, PARAMS_PADRAO, p || {});
+    var t = taxasAno(Math.max(y, 2027), p), g = Math.pow(1 + e.crescimento / 100, y - 2026);
+    var baseMensal = Math.round(e.receita * g / 12 * 100) / 100;
+    return {
+      id: 'SIMULACAO-' + (e.cnpj || e.id || 'EMPRESA').toString().replace(/\D/g, ''),
+      versao: '1.0.0', dhFatoGerador: Math.max(y, 2027) + '-03-10T10:00:00-03:00',
+      municipio: parseInt(e.ibge, 10) || 0, uf: e.uf || 'RJ',
+      itens: [{
+        numero: 1, '_AJUSTAR_nbs_ou_ncm': 'informe NBS (serviço) ou NCM (mercadoria)', cst: '000', cClassTrib: '000001',
+        baseCalculo: baseMensal,
+        aliquotasNominais: { cbs: t.cbs, ibsEstadual: +(t.ibs / 2).toFixed(4), ibsMunicipal: +(t.ibs / 2).toFixed(4) }
+      }]
+    };
+  }
+
+  var api = { r2: r2, YEARS: YEARS, ANEXOS: ANEXOS, LIMITE_SN: LIMITE_SN, SUBLIMITE_SN: SUBLIMITE_SN, CENARIOS: CENARIOS, FRAC_IBS: FRAC_IBS,
+    TIPOS: TIPOS, PARAMS_PADRAO: PARAMS_PADRAO, simplesEfetiva: simplesEfetiva, taxasAno: taxasAno, simulaAno: simulaAno,
+    simulaEmpresa: simulaEmpresa, otimizaFatorR: otimizaFatorR, normaliza: normaliza, irpjCsll: irpjCsll, payloadCalculadoraOficial: payloadCalculadoraOficial };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Motor = api;
+})(typeof window !== 'undefined' ? window : this);
+
+</script>
+<script>
+(function(){
+'use strict';
+var M=window.Motor, KEY='simtrib.v2', KEY1='simtrib.v1', SID='simtrib.sid', LOCK='simtrib.lock';
+var REG={simples:{n:'Simples Nacional',c:'var(--s1)',d:''},presumido:{n:'Lucro Presumido',c:'var(--s2)',d:''},real:{n:'Lucro Real',c:'var(--s3)',d:''},hibrido:{n:'Simples + IBS/CBS regular',c:'var(--s4)',d:'6 4'}};
+var ORDER=['simples','presumido','real','hibrido'];
+var S={empresas:[],users:[],user:null,params:Object.assign({},M.PARAMS_PADRAO),sel:null,tab:'carteira',edit:null,modal:null,share:null,resetFor:null,authErr:'',msg:'',legacy:false};
+var cache={};
+
+function load(){try{var j=JSON.parse(localStorage.getItem(KEY)||'null');if(j){S.users=j.users||[];S.empresas=j.empresas||[];S.params=Object.assign({},M.PARAMS_PADRAO,j.params||{});S.sel=j.sel||null;return true}
+  var o=JSON.parse(localStorage.getItem(KEY1)||'null');if(o){S.empresas=o.empresas||[];S.params=Object.assign({},M.PARAMS_PADRAO,o.params||{});S.sel=o.sel||null;S.legacy=true;return true}}catch(e){}return false}
+function save(){try{localStorage.setItem(KEY,JSON.stringify({users:S.users,empresas:S.empresas,params:S.params,sel:S.sel}))}catch(e){}}
+function isM(){return !!S.user&&S.user.role==='master'}
+function vis(){if(!S.user)return [];if(isM())return S.empresas;return S.empresas.filter(function(e){return (e.compart||[]).indexOf(S.user.id)>=0})}
+function userName(id){var u=S.users.filter(function(x){return x.id===id})[0];return u?u.nome:'(removido)'}
+function restoreSession(){try{var id=sessionStorage.getItem(SID);var u=S.users.filter(function(x){return x.id===id&&x.ativo})[0];S.user=u||null}catch(e){S.user=null}}
+// ---------- autenticação (apenas no navegador; PBKDF2-SHA256 via WebCrypto) ----------
+var ITER=210000;
+function b64e(buf){var b=new Uint8Array(buf),s='';for(var i=0;i<b.length;i++)s+=String.fromCharCode(b[i]);return btoa(s)}
+function b64d(s){var b=atob(s),u=new Uint8Array(b.length);for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u}
+function pbkdf(pw,salt,iter){var enc=new TextEncoder();return crypto.subtle.importKey('raw',enc.encode(pw),'PBKDF2',false,['deriveBits']).then(function(k){return crypto.subtle.deriveBits({name:'PBKDF2',salt:salt,iterations:iter,hash:'SHA-256'},k,256)}).then(b64e)}
+function newSalt(){return crypto.getRandomValues(new Uint8Array(16))}
+function mkUser(nome,login,pw,role){var salt=newSalt();return pbkdf(pw,salt,ITER).then(function(h){return {id:'u'+Math.random().toString(36).slice(2,9),nome:nome,login:login,salt:b64e(salt),iter:ITER,hash:h,role:role,ativo:true,criado:new Date().toISOString()}})}
+function checkPw(u,pw){return pbkdf(pw,b64d(u.salt),u.iter).then(function(h){return h===u.hash})}
+function setPw(u,pw){var salt=newSalt();return pbkdf(pw,salt,ITER).then(function(h){u.salt=b64e(salt);u.iter=ITER;u.hash=h})}
+function lockLeft(){try{var l=JSON.parse(localStorage.getItem(LOCK)||'null');if(l&&l.until>Date.now())return Math.ceil((l.until-Date.now())/1000)}catch(e){}return 0}
+function failLogin(){try{var l=JSON.parse(localStorage.getItem(LOCK)||'null')||{n:0};l.n=(l.n||0)+1;if(l.n>=5){l.until=Date.now()+Math.min(300,15*Math.pow(2,l.n-5))*1000}localStorage.setItem(LOCK,JSON.stringify(l))}catch(e){}}
+function okLogin(){try{localStorage.removeItem(LOCK)}catch(e){}}
+function pwErr(pw,pw2){if(pw.length<8)return 'A senha deve ter ao menos 8 caracteres.';if(pw2!=null&&pw!==pw2)return 'As senhas não conferem.';return ''}
+function startSession(u){S.user=u;try{sessionStorage.setItem(SID,u.id)}catch(e){}S.tab='carteira';S.authErr='';S.msg=''}
+function uid(){return 'e'+Math.random().toString(36).slice(2,9)}
+function demo(){return [
+{id:uid(),razao:'Alfa Serviços Técnicos Ltda (EXEMPLO)',cnpj:'',im:'',uf:'RJ',municipio:'São Gonçalo',ibge:'3304904',regimeAtual:'simples',tipo:'servR',receita:900000,folha:120000,compras:120000,despesas:150000,pctB2B:70,pctFornSimples:30,aliqIcms:18,aliqIss:5,reducao:0,crescimento:8,patronal:28.8},
+{id:uid(),razao:'Beta Comércio de Peças Ltda (EXEMPLO)',cnpj:'',im:'',uf:'RJ',municipio:'Niterói',ibge:'3303302',regimeAtual:'presumido',tipo:'comercio',receita:2400000,folha:220000,compras:1400000,despesas:250000,pctB2B:40,pctFornSimples:20,aliqIcms:18,aliqIss:5,reducao:0,crescimento:5,patronal:28.8},
+{id:uid(),razao:'Gama Clínica Médica Ltda (EXEMPLO)',cnpj:'',im:'',uf:'RJ',municipio:'Rio de Janeiro',ibge:'3304557',regimeAtual:'presumido',tipo:'serv3',receita:3100000,folha:900000,compras:200000,despesas:600000,pctB2B:0,pctFornSimples:10,aliqIcms:18,aliqIss:3,reducao:60,crescimento:4,patronal:28.8}]}
+
+// ---------- formatação ----------
+var fm=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
+function R(v){return v==null?'—':fm.format(Math.round(v))}
+function P(v,d){return v==null?'—':(v*100).toLocaleString('pt-BR',{minimumFractionDigits:d==null?1:d,maximumFractionDigits:d==null?1:d})+'%'}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function short(v){var a=Math.abs(v);if(a>=1e6)return 'R$ '+(v/1e6).toLocaleString('pt-BR',{maximumFractionDigits:1})+' mi';if(a>=1e3)return 'R$ '+Math.round(v/1e3)+' mil';return 'R$ '+Math.round(v)}
+function sim(e){var k=JSON.stringify([e,S.params]);if(!cache[k]){cache = cache.__n>200?{}:cache;cache[k]=M.simulaEmpresa(e,S.params);cache.__n=(cache.__n||0)+1}return cache[k]}
+function empById(id){return vis().filter(function(e){return e.id===id})[0]}
+function totalRegime(a,k){var r=a.regimes[k];return r&&r.elegivel&&r.total!=null?r.total:null}
+function atualKey(e,a){var k=e.regimeAtual;var t=totalRegime(a,k);return t!=null?k:a.melhor}
+
+// ---------- gráfico de linhas (SVG) ----------
+var charts={};
+function lineChart(id,series,years){
+  var W=720,H=300,l=64,r=118,t=14,b=28,pw=W-l-r,ph=H-t-b,max=0;
+  series.forEach(function(s){s.values.forEach(function(v){if(v!=null&&v>max)max=v})});
+  if(max<=0)max=1;var step=Math.pow(10,Math.floor(Math.log10(max/4)));var m=max/4/step;step*=m<=1?1:m<=2?2:m<=5?5:10;var top=Math.ceil(max/step)*step;
+  function X(i){return l+pw*i/(years.length-1)}function Y(v){return t+ph*(1-v/top)}
+  var g='';for(var v=0;v<=top+1e-6;v+=step){g+='<line x1="'+l+'" x2="'+(l+pw)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="var(--line)"/><text x="'+(l-6)+'" y="'+(Y(v)+4)+'" text-anchor="end">'+short(v)+'</text>'}
+  years.forEach(function(y,i){g+='<text x="'+X(i)+'" y="'+(H-8)+'" text-anchor="middle">'+y+'</text>'});
+  var lab=[];
+  series.forEach(function(s){var d='',open=false,last=-1;s.values.forEach(function(v,i){if(v==null){open=false;return}d+=(open?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1);open=true;last=i});
+    g+='<path d="'+d+'" fill="none" stroke="'+s.color+'" stroke-width="2.2" stroke-linejoin="round" '+(s.dash?'stroke-dasharray="'+s.dash+'"':'')+'/>';
+    s.values.forEach(function(v,i){if(v!=null)g+='<circle cx="'+X(i)+'" cy="'+Y(v)+'" r="3" fill="'+s.color+'" stroke="var(--surface)" stroke-width="2"/>'});
+    if(last>=0)lab.push({y:Y(s.values[last]),n:s.name})});
+  lab.sort(function(a,b){return a.y-b.y});for(var i=1;i<lab.length;i++)if(lab[i].y-lab[i-1].y<13)lab[i].y=lab[i-1].y+13;
+  lab.forEach(function(o){g+='<text x="'+(l+pw+8)+'" y="'+(o.y+4)+'">'+esc(o.n)+'</text>'});
+  g+='<line id="'+id+'-x" x1="0" x2="0" y1="'+t+'" y2="'+(t+ph)+'" stroke="var(--muted)" stroke-dasharray="3 3" style="display:none"/>';
+  charts[id]={series:series,years:years,l:l,pw:pw,W:W};
+  return '<div class="chartwrap" id="'+id+'"><svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img">'+g+'</svg></div>';
+}
+function bindCharts(){
+  var tip=document.getElementById('tip');
+  Object.keys(charts).forEach(function(id){var w=document.getElementById(id);if(!w)return;var c=charts[id],svg=w.querySelector('svg'),vx=document.getElementById(id+'-x');
+    function mv(ev){var rc=svg.getBoundingClientRect(),px=(ev.clientX-rc.left)/rc.width*c.W,i=Math.round((px-c.l)/c.pw*(c.years.length-1));i=Math.max(0,Math.min(c.years.length-1,i));
+      var x=c.l+c.pw*i/(c.years.length-1);vx.setAttribute('x1',x);vx.setAttribute('x2',x);vx.style.display='';
+      var h='<b>'+c.years[i]+'</b>';c.series.forEach(function(s){var v=s.values[i];h+='<div><span style="color:'+s.color+'">●</span> '+esc(s.name)+': '+(v==null?'—':R(v))+'</div>'});
+      tip.innerHTML=h;tip.style.display='block';var tx=ev.clientX+14,ty=ev.clientY+14;if(tx+200>window.innerWidth)tx=ev.clientX-200;tip.style.left=(tx+window.scrollX)+'px';tip.style.top=(ty+window.scrollY)+'px'}
+    function lv(){vx.style.display='none';tip.style.display='none'}
+    svg.addEventListener('pointermove',mv);svg.addEventListener('pointerdown',mv);svg.addEventListener('pointerleave',lv)})}
+function legend(keys){return '<div class="legend">'+keys.map(function(k){return '<span><i style="border-color:'+REG[k].c+';'+(REG[k].d?'border-top-style:dashed':'')+'"></i>'+REG[k].n+'</span>'}).join('')+'</div>'}
+
+// ---------- abas ----------
+var TABS=[['carteira','Carteira'],['empresas','Empresas'],['simulacao','Simulação'],['premissas','Premissas'],['metodo','Metodologia e fontes']];
+function tabsFor(){var t=TABS.slice();if(isM())t.push(['usuarios','Usuários']);t.push(['conta','Conta']);return t}
+function nav(){document.getElementById('nav').innerHTML=tabsFor().map(function(t){return '<button data-act="tab" data-v="'+t[0]+'" class="'+(S.tab===t[0]?'on':'')+'">'+t[1]+'</button>'}).join('')}
+
+function viewCarteira(){
+  if(!vis().length)return '<div class="card">'+(isM()?'Nenhuma empresa cadastrada. Vá em <b>Empresas</b> para cadastrar ou importar.':'Nenhuma empresa foi compartilhada com você ainda. Peça ao usuário master.')+'</div>';
+  var rows='',totA=M.YEARS.map(function(){return 0}),totB=totA.slice(),totAny=0,eco26=0;
+  vis().forEach(function(e){var s=sim(e),a=s.anos[0],ka=atualKey(e,a),ta=totalRegime(a,ka),tb=totalRegime(a,a.melhor),eco=ta-tb;eco26+=eco;
+    s.anos.forEach(function(y,i){var k=atualKey(e,y);totA[i]+=totalRegime(y,k)||0;totB[i]+=totalRegime(y,y.melhor)||0});
+    var a33=s.anos[7];
+    rows+='<tr><td><a href="#" data-act="open" data-id="'+e.id+'">'+esc(e.razao||'(sem nome)')+'</a></td><td>'+REG[ka].n+'</td><td>'+R(ta)+'</td><td>'+REG[a.melhor].n+'</td><td>'+R(tb)+'</td><td class="'+(eco>0.5?'good':'')+'">'+(eco>0.5?R(eco):'—')+'</td><td>'+REG[a33.melhor].n+'</td><td>'+R(totalRegime(a33,a33.melhor))+'</td></tr>'});
+  var ch=lineChart('ch-cart',[{name:'Regime atual mantido',color:'var(--s2)',values:totA},{name:'Melhor regime/ano',color:'var(--s1)',values:totB}],M.YEARS);
+  return '<div class="card"><h2>Carga tributária total da carteira ('+vis().length+' empresas)</h2><div class="grid g4"><div class="kpi"><div class="l">Economia potencial em 2026</div><div class="n good">'+R(eco26)+'</div><div class="d">migrando cada empresa ao melhor regime</div></div><div class="kpi"><div class="l">Carga 2026 (regime atual)</div><div class="n">'+R(totA[0])+'</div></div><div class="kpi"><div class="l">Carga 2033 (regime atual)</div><div class="n">'+R(totA[7])+'</div><div class="d">'+((totA[7]/totA[0]-1)*100).toFixed(1).replace('.',',')+'% vs 2026 (inclui o crescimento da receita)</div></div><div class="kpi"><div class="l">Carga 2033 (melhor regime)</div><div class="n">'+R(totB[7])+'</div></div></div>'+ch+legend([])+'<div class="legend"><span><i style="border-color:var(--s2)"></i>Regime atual mantido</span><span><i style="border-color:var(--s1)"></i>Melhor regime a cada ano</span></div></div>'+
+  '<div class="card"><h2>Comparativo por empresa</h2><div class="tw"><table><tr><th>Empresa</th><th>Regime atual</th><th>Carga 2026</th><th>Melhor 2026</th><th>Carga melhor</th><th>Economia/ano</th><th>Melhor 2033</th><th>Carga 2033</th></tr>'+rows+'</table></div><p class="note">Carga = tributos sobre receita e lucro + CPP patronal. Resultados são estimativas para planejamento; veja Premissas e Metodologia.</p></div>'}
+
+function viewEmpresas(){
+  var Mm=isM(),L=vis();
+  var h='<div class="card"><div class="row"><h2 class="sp" style="margin:0">'+(Mm?'Cadastro de empresas':'Empresas compartilhadas com você')+'</h2>'+(Mm?'<button class="b" data-act="new">+ Nova empresa</button><button class="b sec" data-act="imp">Importar</button><button class="b sec" data-act="exp">Exportar</button>':'')+'</div>';
+  if(!L.length)h+='<p class="note">'+(Mm?'Nenhuma empresa. <a href="#" data-act="loaddemo">Carregar 3 empresas de exemplo (fictícias)</a>.':'Nenhuma empresa foi compartilhada com você ainda. Peça ao usuário master.')+'</p>';
+  else h+='<div class="tw"><table><tr><th>Empresa</th><th>CNPJ</th><th>Regime atual</th><th>Atividade</th><th>Receita anual</th>'+(Mm?'<th>Compartilhada com</th>':'')+'<th></th></tr>'+L.map(function(e){return '<tr><td>'+esc(e.razao)+'</td><td>'+esc(e.cnpj)+'</td><td>'+REG[e.regimeAtual].n+'</td><td>'+M.TIPOS[e.tipo].nome+'</td><td>'+R(e.receita)+'</td>'+(Mm?'<td>'+(esc((e.compart||[]).map(userName).join(', '))||'—')+'</td>':'')+'<td><button class="b sec sm" data-act="open" data-id="'+e.id+'">Simular</button>'+(Mm?' <button class="b sec sm" data-act="edit" data-id="'+e.id+'">Editar</button> <button class="b sec sm" data-act="share" data-id="'+e.id+'">Compartilhar</button> <button class="b sec sm" data-act="del" data-id="'+e.id+'">Excluir</button>':'')+'</td></tr>'}).join('')+'</table></div>';
+  h+='</div>';
+  if(Mm&&S.modal)h+=viewModal();
+  if(Mm&&S.share)h+=viewShare(S.share);
+  if(Mm&&S.edit)h+=viewForm(S.edit);
+  return h}
+function viewShare(id){
+  var e=S.empresas.filter(function(x){return x.id===id})[0];if(!e)return '';
+  var us=S.users.filter(function(u){return u.role!=='master'&&u.ativo});
+  return '<div class="card"><h2>Compartilhar “'+esc(e.razao)+'”</h2>'+(us.length?'<p class="note">Os usuários marcados veem esta empresa e podem simulá-la (somente leitura). O master sempre vê todas.</p>'+us.map(function(u){return '<label style="display:flex;gap:8px;align-items:center;font-size:14px;color:var(--ink)"><input type="checkbox" style="width:auto;margin:0" data-sh="'+u.id+'"'+((e.compart||[]).indexOf(u.id)>=0?' checked':'')+'> '+esc(u.nome)+' <span class="note">('+esc(u.login)+')</span></label>'}).join(''):'<p class="note">Não há usuários ativos além do master. Cadastre em <b>Usuários</b>.</p>')+'<div class="row" style="margin-top:10px"><button class="b sec sm" data-act="shall">Marcar todos</button><button class="b sec sm" data-act="shnone">Desmarcar todos</button><button class="b" data-act="shareclose">Concluir</button></div></div>'}
+
+function fld(k,lbl,v,type,extra){return '<label>'+lbl+'<input data-f="'+k+'" type="'+(type||'text')+'" value="'+esc(v==null?'':v)+'" '+(extra||'')+'></label>'}
+function viewForm(e){
+  var opt=function(o,cur){return Object.keys(o).map(function(k){return '<option value="'+k+'"'+(k===cur?' selected':'')+'>'+(o[k].nome||o[k].n)+'</option>'}).join('')};
+  var regs={simples:REG.simples,presumido:REG.presumido,real:REG.real};
+  return '<div class="card" id="form"><h2>'+(e.__novo?'Nova empresa':'Editar empresa')+'</h2><div class="grid g4">'+
+  fld('razao','Razão social',e.razao)+fld('cnpj','CNPJ',e.cnpj)+fld('im','Inscrição municipal',e.im)+fld('uf','UF',e.uf,'text','maxlength="2"')+fld('municipio','Município',e.municipio)+fld('ibge','Código IBGE do município',e.ibge)+
+  '<label>Regime atual<select data-f="regimeAtual">'+opt(regs,e.regimeAtual)+'</select></label>'+
+  '<label>Atividade<select data-f="tipo">'+opt(M.TIPOS,e.tipo)+'</select></label></div>'+
+  '<h3>Dados econômicos (ano-base 2026, valores anuais em R$)</h3><div class="grid g4">'+
+  fld('receita','Receita bruta anual (RBT12)',e.receita,'number')+fld('folha','Folha + pró-labore anual (sem encargos)',e.folha,'number')+fld('compras','Aquisições com direito a crédito (insumos, mercadorias, aluguel PJ…)',e.compras,'number')+fld('despesas','Outras despesas operacionais anuais',e.despesas,'number')+
+  fld('pctB2B','% da receita vendida a clientes PJ (B2B)',e.pctB2B,'number')+fld('pctFornSimples','% das aquisições feitas de fornecedores do Simples',e.pctFornSimples,'number')+
+  fld('aliqIcms','Alíquota ICMS (%) — comércio/indústria',e.aliqIcms,'number','step="0.1"')+fld('aliqIss','Alíquota ISS (%) — serviços',e.aliqIss,'number','step="0.1"')+
+  '<label>Redução de alíquota IBS/CBS<select data-f="reducao">'+[[0,'Sem redução (alíquota padrão)'],[30,'30% — profissões intelectuais regulamentadas'],[60,'60% — saúde, educação, etc.'],[100,'100% — alíquota zero / cesta básica']].map(function(o){return '<option value="'+o[0]+'"'+(+e.reducao===o[0]?' selected':'')+'>'+o[1]+'</option>'}).join('')+'</select></label>'+
+  fld('crescimento','Crescimento anual da receita (%)',e.crescimento,'number','step="0.1"')+fld('patronal','Encargos patronais s/ folha (%) — CPP+RAT+terceiros',e.patronal,'number','step="0.1"')+'</div>'+
+  '<div class="row" style="margin-top:12px"><button class="b" data-act="save">Salvar</button><button class="b sec" data-act="cancel">Cancelar</button></div></div>'}
+function viewModal(){
+  var m=S.modal;
+  return '<div class="card"><h2>'+(m==='imp'?'Importar empresas':'Exportar empresas')+'</h2>'+(m==='imp'?
+   '<p class="note">Cole JSON (exportado daqui) ou CSV com cabeçalho (colunas: razao, cnpj, im, uf, municipio, ibge, regime, atividade, receita, folha, compras, despesas, pctB2B, pctFornSimples, aliqIcms, aliqIss, reducao, crescimento, patronal). Números aceitam formato brasileiro (1.234,56). Ou escolha um arquivo:</p><input type="file" id="file" accept=".csv,.json,.txt"><textarea id="ta" placeholder="Cole aqui…"></textarea><div class="row" style="margin-top:8px"><button class="b" data-act="doimp">Importar</button><button class="b sec" data-act="closemodal">Fechar</button></div>':
+   '<p class="note">Copie o JSON abaixo para guardar ou levar a outro navegador. Os dados ficam apenas neste navegador.</p><textarea id="ta" readonly>'+esc(JSON.stringify(S.empresas,null,1))+'</textarea><div class="row" style="margin-top:8px"><button class="b" data-act="copyexp">Copiar</button><button class="b sec" data-act="closemodal">Fechar</button></div>')+'</div>'}
+
+function viewSimulacao(){
+  if(!vis().length)return '<div class="card">Nenhuma empresa disponível para simular.</div>';
+  var e=empById(S.sel)||vis()[0];S.sel=e.id;var s=sim(e),n=s.empresa;
+  var sel='<div class="card"><label>Empresa<select data-act="selemp">'+vis().map(function(x){return '<option value="'+x.id+'"'+(x.id===e.id?' selected':'')+'>'+esc(x.razao)+'</option>'}).join('')+'</select></label></div>';
+  var a0=s.anos[0],ka=atualKey(n,a0),ta=totalRegime(a0,ka),tb=totalRegime(a0,a0.melhor),eco=ta-tb;
+  var kp='<div class="grid g4"><div class="kpi"><div class="l">Regime atual</div><div class="n" style="font-size:16px">'+REG[n.regimeAtual].n+'</div><div class="d">carga 2026: '+R(ta)+' ('+P(ta/s.anos[0].receita)+' da receita)</div></div>'+
+   '<div class="kpi"><div class="l">Melhor regime em 2026</div><div class="n" style="font-size:16px">'+REG[a0.melhor].n+'</div><div class="d">carga: '+R(tb)+' ('+P(tb/a0.receita)+')</div></div>'+
+   '<div class="kpi"><div class="l">Economia anual possível</div><div class="n '+(eco>0.5?'good':'')+'">'+(eco>0.5?R(eco):'—')+'</div><div class="d">'+(eco>0.5?'vs regime atual, 2026':'regime atual já é o menor')+'</div></div>'+
+   '<div class="kpi"><div class="l">Melhor em 2033 (reforma plena)</div><div class="n" style="font-size:16px">'+REG[s.anos[7].melhor].n+'</div><div class="d">'+R(totalRegime(s.anos[7],s.anos[7].melhor))+'</div></div></div>';
+  var keys=ORDER.filter(function(k){return k!=='hibrido'||s.anos.some(function(a){return a.regimes.hibrido&&a.regimes.hibrido.elegivel})});
+  var series=keys.map(function(k){return{name:REG[k].n.replace('Simples + IBS/CBS regular','Simples híbrido'),color:REG[k].c,dash:REG[k].d,values:s.anos.map(function(a){return totalRegime(a,k)})}});
+  var chart='<div class="card"><h2>Carga tributária anual por regime, 2026–2033</h2>'+lineChart('ch-emp',series,M.YEARS)+legend(keys)+'</div>';
+  var th='<tr><th>Ano</th><th>Receita</th>'+keys.map(function(k){return '<th>'+REG[k].n+'</th>'}).join('')+'<th>Melhor</th></tr>',tb2='';
+  s.anos.forEach(function(a){tb2+='<tr><td>'+a.ano+'</td><td>'+R(a.receita)+'</td>'+keys.map(function(k){var t=totalRegime(a,k);return '<td class="'+(t==null?'na':(a.melhor===k?'v good':''))+'">'+(t==null?(a.regimes[k]&&!a.regimes[k].elegivel?'inelegível':'—'):R(t))+'</td>'}).join('')+'<td>'+REG[a.melhor].n+'</td></tr>'});
+  var tab='<div class="card"><h2>Detalhamento anual</h2><div class="tw"><table>'+th+tb2+'</table></div><p class="note">Em verde: menor carga do ano. 2026: CBS/IBS em teste (0,9%/0,1%) sem carga líquida adicional.</p></div>';
+  var det=detalhe(s);
+  var plan='<div class="card"><h2>Plano tributário sugerido</h2><ul class="plan">'+planoItens(s).map(function(i){return '<li>'+i+'</li>'}).join('')+'</ul><div class="row" style="margin-top:10px"><button class="b" data-act="print">Imprimir / salvar PDF</button><button class="b sec" data-act="copyplan">Copiar relatório (texto)</button><button class="b sec" data-act="payload">Gerar modelo para Calculadora RTC oficial</button></div><div id="out"></div></div>';
+  return sel+'<div class="card"><h2>'+esc(n.razao)+'</h2>'+kp+'</div>'+chart+plan+det+tab}
+
+function detalhe(s){
+  var a=s.anos[0],b=s.anos[1],c=s.anos[7],pr=a.regimes.presumido,rl=a.regimes.real;
+  function cmp(x){return '<tr><td>'+x[0]+'</td><td>'+R(x[1])+'</td><td>'+R(x[2])+'</td><td>'+R(x[3])+'</td></tr>'}
+  var p27=b.regimes.presumido,p33=c.regimes.presumido,r27=b.regimes.real,r33=c.regimes.real;
+  return '<div class="card"><h2>Composição da carga — Presumido e Real</h2><div class="tw"><table><tr><th>Componente</th><th>2026</th><th>2027</th><th>2033</th></tr>'+
+  '<tr><th colspan="4">Lucro Presumido</th></tr>'+[['IRPJ',pr.irpj,p27.irpj,p33.irpj],['CSLL',pr.csll,p27.csll,p33.csll],['PIS/Cofins',pr.pisCofins,p27.pisCofins,p33.pisCofins],['CBS',pr.cbs,p27.cbs,p33.cbs],['IBS',pr.ibs,p27.ibs,p33.ibs],['ICMS líquido',pr.icms,p27.icms,p33.icms],['ISS',pr.iss,p27.iss,p33.iss],['CPP patronal',pr.cpp,p27.cpp,p33.cpp]].map(cmp).join('')+
+  '<tr><th colspan="4">Lucro Real</th></tr>'+[['IRPJ',rl.irpj,r27.irpj,r33.irpj],['CSLL',rl.csll,r27.csll,r33.csll],['PIS/Cofins líquido',rl.pisCofins,r27.pisCofins,r33.pisCofins],['CBS líquida',rl.cbs,r27.cbs,r33.cbs],['IBS líquido',rl.ibs,r27.ibs,r33.ibs],['ICMS líquido',rl.icms,r27.icms,r33.icms],['ISS',rl.iss,r27.iss,r33.iss],['CPP patronal',rl.cpp,r27.cpp,r33.cpp],['Lucro tributável',rl.lucro,r27.lucro,r33.lucro]].map(cmp).join('')+'</table></div></div>'}
+
+function planoItens(s){
+  var n=s.empresa,L=[],a=s.anos[0],ka=atualKey(n,a),ta=totalRegime(a,ka),tb=totalRegime(a,a.melhor),eco=ta-tb;
+  if(!a.regimes.simples.elegivel&&n.regimeAtual==='simples')L.push('<b class="bad">Atenção:</b> a receita informada excede o limite do Simples (R$ 4,8 mi). Avalie o enquadramento imediatamente.');
+  if(a.melhor===ka)L.push('<b>Regime 2026:</b> manter <b>'+REG[ka].n+'</b> — é o de menor carga ('+R(ta)+', '+P(ta/a.receita)+' da receita).');
+  else L.push('<b>Regime 2026:</b> migrar de '+REG[ka].n+' para <b>'+REG[a.melhor].n+'</b> reduz a carga em <b class="good">'+R(eco)+'/ano</b> ('+P(eco/ta)+'). Observe os prazos de opção (Simples: janeiro; Presumido/Real: 1º pagamento do ano).');
+  var y27=s.anos[1];
+  if(y27.regimes.hibrido&&y27.regimes.hibrido.elegivel){var h=y27.regimes.hibrido.total,sn=y27.regimes.simples.total;
+    if(h<sn-0.5)L.push('<b>2027:</b> optar pelo regime regular de IBS/CBS dentro do Simples economiza '+R(sn-h)+' no ano (créditos das aquisições superam o custo) e entrega crédito integral ao cliente B2B.');
+    else L.push('<b>2027:</b> permanecer no Simples padrão é mais barato que o regime regular de IBS/CBS ('+R(sn)+' × '+R(h)+').');}
+  if(y27.creditoPerdido>0.5&&n.pctB2B>0)L.push('<b>Competitividade B2B:</b> clientes PJ do regime regular perdem cerca de <b>'+R(y27.creditoPerdido)+'</b> em crédito de IBS/CBS ao comprar de você no Simples padrão em 2027 ('+R(s.anos[7].creditoPerdido)+' em 2033). Esse valor tende a virar pedido de desconto ou perda de cliente — ele é o benchmark para decidir pelo regime regular.');
+  var g=s.anos[0],last=s.anos[7],kl=last.melhor;
+  L.push('<b>Reforma plena (2033):</b> regime de menor carga será <b>'+REG[kl].n+'</b> ('+R(totalRegime(last,kl))+'). Entre 2029 e 2032 o ICMS/ISS cai 10 pontos por ano enquanto o IBS sobe; revise o regime anualmente.');
+  var ex=s.anos.filter(function(y){return !y.regimes.simples.elegivel})[0];
+  if(n.regimeAtual==='simples'&&ex)L.push('<b>Limite do Simples:</b> com crescimento de '+n.crescimento.toLocaleString('pt-BR')+'% a.a., a receita ultrapassa R$ 4,8 mi em <b>'+ex.ano+'</b> — planeje a transição para Presumido/Real.');
+  var sub=s.anos.filter(function(y){return y.receita>M.SUBLIMITE_SN&&y.regimes.simples.elegivel})[0];
+  if(sub&&n.regimeAtual==='simples')L.push('<b>Sublimite:</b> acima de R$ 3,6 mi, ICMS/ISS passam a ser recolhidos fora do DAS (a simulação não modela esse efeito; confira).');
+  var of=s.otimFatorR;
+  if(of&&of.aplica){if(of.economiaLiquida>0)L.push('<b>Fator R:</b> hoje '+P(of.fatorR)+' (&lt; 28%) → Anexo V. Elevar folha/pró-labore em '+R(of.folhaExtra)+'/ano (total '+R(of.folhaNecessaria)+') migra para o Anexo III e economiza líquido <b class="good">'+R(of.economiaLiquida)+'/ano</b> (DAS '+R(of.dasV)+' → '+R(of.dasIII)+'), já descontado o custo da remuneração adicional.');
+    else L.push('<b>Fator R:</b> hoje '+P(of.fatorR)+'; elevar a folha até 28% <u>não compensa</u> (economia líquida '+R(of.economiaLiquida)+').');}
+  else if(of&&!of.aplica)L.push('<b>Fator R:</b> '+P(of.fatorR)+' ≥ 28% — já enquadrado no Anexo III. Mantenha a folha/pró-labore acima de 28% da receita.');
+  var re=s.anos[1].regimes.real;if(re.cbs<0)L.push('<b>Saldo credor de CBS:</b> as aquisições geram mais crédito que débito (o simulador considera o saldo como redução da carga; na prática há regras de ressarcimento/compensação).');
+  if(n.reducao>0)L.push('<b>Redução de alíquota '+n.reducao+'%:</b> aplicada à alíquota de IBS/CBS nas vendas (alíquota efetiva = alíquota × (1 − redução), como na Calculadora RTC). Confirme o cClassTrib da atividade.');
+  if(n.pctFornSimples>30)L.push('<b>Cadeia de fornecedores:</b> '+n.pctFornSimples+'% das aquisições vêm do Simples — crédito reduzido (premissa: '+S.params.creditoSimples+'% do crédito cheio). Renegociar com fornecedores do regime regular pode elevar o crédito.');
+  return L}
+
+function planoTexto(s){var d=document.createElement('div');d.innerHTML=planoItens(s).map(function(i){return '• '+i}).join('\n');return s.empresa.razao+' — Plano tributário (simulação)\n\n'+d.textContent+'\n\nEstimativa para planejamento; não substitui apuração oficial.'}
+
+function viewPremissas(){var h=viewPremissas0();return isM()?h:h.replace(/<(input|select) /g,'<$1 disabled ')}
+function viewPremissas0(){
+  var p=S.params,c=M.CENARIOS;
+  var rows=M.YEARS.map(function(y){var t=M.taxasAno(y,p);return '<tr><td>'+y+'</td><td>'+(y===2026?'0,9% (teste)':t.cbs.toLocaleString('pt-BR',{maximumFractionDigits:2})+'%')+'</td><td>'+(y===2026?'0,1% (teste)':t.ibs.toLocaleString('pt-BR',{maximumFractionDigits:2})+'%')+'</td><td>'+(t.pisCofins?'vigente':'extintos')+'</td><td>'+Math.round(t.fracIcmsIss*100)+'%</td></tr>'}).join('');
+  return '<div class="card"><h2>Alíquotas de referência</h2><div class="grid g4"><label>Cenário<select data-p="cenario">'+Object.keys(c).map(function(k){return '<option value="'+k+'"'+(p.cenario===k?' selected':'')+'>'+c[k].nome+'</option>'}).join('')+'</select></label>'+
+  '<label>CBS de referência (%)<input data-p="cbs" type="number" step="0.01" value="'+p.cbs+'"></label><label>IBS de referência total (%)<input data-p="ibs" type="number" step="0.01" value="'+p.ibs+'"></label></div>'+
+  '<div class="warnbox">A alíquota de referência da CBS para 2027 foi calculada pelo TCU em 11,3% (28/10/2026) e <b>ainda depende de resolução do Senado (prazo 15/12/2026)</b>; a do IBS (2029–2033) ainda será fixada — 18,7% é estimativa do CGIBS. Atualize aqui quando houver definição.</div>'+
+  '<div class="grid g4" style="margin-top:8px"><label>Crédito de compras do Simples (% do crédito cheio)<input data-p="creditoSimples" type="number" value="'+p.creditoSimples+'"></label><label>Encargos patronais padrão (%)<input data-p="patronalPadrao" type="number" step="0.1" value="'+p.patronalPadrao+'"></label>'+
+  '<label>Redutor de 0,1 p.p. na CBS em 2027–28<select data-p="redutorCbs"><option value="1"'+(p.redutorCbs?' selected':'')+'>Sim</option><option value="0"'+(!p.redutorCbs?' selected':'')+'>Não</option></select></label>'+
+  '<label>Excluir ICMS da base de PIS/Cofins (Tema 69)<select data-p="excluirIcmsPisCofins"><option value="1"'+(p.excluirIcmsPisCofins?' selected':'')+'>Sim</option><option value="0"'+(!p.excluirIcmsPisCofins?' selected':'')+'>Não</option></select></label></div></div>'+
+  '<div class="card"><h2>Cronograma resultante</h2><div class="tw"><table><tr><th>Ano</th><th>CBS</th><th>IBS</th><th>PIS/Cofins</th><th>ICMS/ISS restante</th></tr>'+rows+'</table></div></div>'}
+
+function viewMetodo(){return '<div class="card"><h2>Base normativa e fontes</h2><ul class="plan">'+
+ '<li><a href="https://www.gov.br/receitafederal/pt-br/assuntos/noticias/2026/novembro/receita-federal-publica-primeiro-codigo-fonte-aberto-no-github-e-amplia-transparencia-da-reforma-tributaria" target="_blank" rel="noopener">Receita Federal — código-fonte aberto da Calculadora de Tributos (nov/2026)</a>, Portaria Cotec nº 342/2026, licença MIT.</li>'+
+ '<li>Repositórios: <code>ReceitaFederal/calculadora-rtc-regime-regular</code> (CBS, IBS e IS — LC 214/2025) e <code>ReceitaFederal/calculadora-rtc-simples-nacional</code>.</li>'+
+ '<li>LC 123/2006 (Anexos I–V do Simples e Fator R); LC 214/2025 (CBS/IBS, cronograma de transição, art. 349 — alíquotas de referência); TCU, 28/10/2026 (CBS 2027 = 11,3%).</li></ul>'+
+ '<h3>O que foi reaproveitado da Calculadora oficial</h3><ul class="plan"><li>Fórmula do tributo: <code>valor = base × alíquota × (1 − redução)</code> — exemplo da documentação (R$ 1.200, CBS 8,8%, redução 60% → R$ 42,24) reproduzido em teste.</li><li>Arredondamento HALF_EVEN em 2 casas.</li><li>2026 = fase de teste (0,9% CBS + 0,1% IBS); a partir de 2027 as alíquotas são informadas (aqui, pelos cenários).</li><li>A calculadora oficial calcula por documento fiscal; este simulador agrega a carga anual por regime. Use o botão “Gerar modelo para Calculadora RTC” para conferir uma operação.</li></ul>'+
+ '<h3>Simplificações — leia antes de decidir</h3><ul class="plan"><li>Cálculo anual (sem apuração trimestral/mensal, adicional de IR sobre 240 mil/ano). Verifique também mudanças recentes nos percentuais de presunção.</li><li>Simples: alíquota efetiva pela fórmula da LC 123 para a RBT12 informada (crescendo conforme a taxa de crescimento). Partição do DAS usa os percentuais da 1ª faixa de cada anexo como aproximação para as demais faixas. Sublimite de R$ 3,6 mi não modelado.</li><li>Simples sem mudança de carga na transição; a parcela de PIS/Cofins/IPI/ICMS/ISS do DAS passa a representar CBS/IBS (define o crédito ao cliente). No regime regular “híbrido” a parcela correspondente sai do DAS e o IBS/CBS é apurado por débito − crédito.</li><li>Créditos de IBS/CBS: sobre aquisições informadas, com fator reduzido para fornecedores do Simples (premissa editável). Saldo credor reduz a carga.</li><li>ICMS: débito − crédito sobre as compras; ISS sem crédito; reduções do ICMS/ISS conforme cronograma 2029–2033.</li><li>Imposto Seletivo, regimes específicos, Zona Franca, benefícios fiscais e tributação de dividendos não modelados.</li><li>Alíquotas de referência de 2027 em diante são premissas editáveis, ainda não definitivas.</li></ul>'+
+ '<h3>Segurança do login</h3><ul class="plan"><li>O cadastro de usuários e o login funcionam <b>somente neste navegador</b>: as senhas são guardadas com hash (PBKDF2-SHA256, 210 mil iterações, salt individual), nunca em texto puro. Não há servidor; quem tiver acesso ao computador/navegador ou ao arquivo pode contornar a tela de login. Para proteção real entre pessoas diferentes, use a versão com servidor.</li><li>Sem recuperação de senha: se o master esquecer a senha, a única saída é limpar os dados do site no navegador (o que apaga usuários e empresas). Faça backup pelo botão Exportar.</li></ul>'+
+ '<p class="note">Ferramenta de apoio ao planejamento; não substitui a análise do contador responsável nem a apuração oficial.</p></div>'}
+
+
+// ---------- telas de acesso ----------
+function userbar(){var el=document.getElementById('userbar');if(!el)return;el.innerHTML=S.user?esc(S.user.nome)+' <span class="badge">'+(isM()?'Master':'Usuário')+'</span> · <a href="#" data-act="print">Imprimir</a> · <a href="#" data-act="logout">Sair</a>':''}
+function viewAuth(){
+  var setup=!S.users.length,err=S.authErr?'<div class="err">'+esc(S.authErr)+'</div>':'';
+  if(setup)return '<div class="card auth"><h2>Criar usuário master</h2><p class="note">Primeiro acesso: defina o administrador, que cadastra os demais usuários e decide quais empresas cada um enxerga.'+(S.legacy?' As empresas já cadastradas neste navegador serão mantidas.':'')+'</p><form id="f-setup" autocomplete="off"><label>Nome<input name="nome" required></label><label>Login<input name="login" required autocapitalize="none"></label><label>Senha (mín. 8 caracteres)<input name="pw" type="password" required autocomplete="new-password"></label><label>Repetir senha<input name="pw2" type="password" required autocomplete="new-password"></label>'+err+'<div class="row" style="margin-top:10px"><button class="b" type="submit">Criar master e entrar</button></div></form><p class="note">Atenção: sem servidor, o login protege apenas contra uso casual neste navegador (veja Metodologia).</p></div>';
+  var lk=lockLeft();
+  return '<div class="card auth"><h2>Entrar</h2><form id="f-login"><label>Login<input name="login" required autocapitalize="none" autocomplete="username"></label><label>Senha<input name="pw" type="password" required autocomplete="current-password"></label>'+err+(lk?'<div class="err">Muitas tentativas. Aguarde '+lk+' s.</div>':'')+'<div class="row" style="margin-top:10px"><button class="b" type="submit">Entrar</button></div></form></div>'}
+function viewUsuarios(){
+  var rows=S.users.map(function(u){var self=S.user&&u.id===S.user.id;return '<tr><td>'+esc(u.nome)+'</td><td>'+esc(u.login)+'</td><td>'+(u.role==='master'?'Master':'Usuário')+'</td><td>'+(u.ativo?'Ativo':'Desativado')+'</td><td>'+(u.role==='master'?S.empresas.length:S.empresas.filter(function(e){return (e.compart||[]).indexOf(u.id)>=0}).length)+'</td><td><button class="b sec sm" data-act="resetuser" data-id="'+u.id+'">Redefinir senha</button>'+(u.role==='master'?'':' <button class="b sec sm" data-act="toggleuser" data-id="'+u.id+'">'+(u.ativo?'Desativar':'Ativar')+'</button> <button class="b sec sm" data-act="deluser" data-id="'+u.id+'">Excluir</button>')+'</td></tr>'}).join('');
+  var msg=S.msg?'<div class="ok">'+esc(S.msg)+'</div>':'',err=S.authErr?'<div class="err">'+esc(S.authErr)+'</div>':'';
+  var rs=S.resetFor?(function(){var u=S.users.filter(function(x){return x.id===S.resetFor})[0];return u?'<div class="card"><h2>Redefinir senha de '+esc(u.nome)+'</h2><form id="f-reset"><label>Nova senha (mín. 8 caracteres)<input name="pw" type="password" required autocomplete="new-password"></label><div class="row" style="margin-top:10px"><button class="b" type="submit">Salvar</button><button class="b sec" type="button" data-act="cancelreset">Cancelar</button></div></form></div>':''})():'';
+  return '<div class="card"><h2>Usuários</h2>'+msg+'<div class="tw"><table><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Status</th><th>Empresas visíveis</th><th></th></tr>'+rows+'</table></div><p class="note">Para liberar empresas a um usuário, use o botão <b>Compartilhar</b> na aba Empresas.</p></div>'+rs+
+   '<div class="card"><h2>Novo usuário</h2><form id="f-newuser" autocomplete="off"><div class="grid g4"><label>Nome<input name="nome" required></label><label>Login<input name="login" required autocapitalize="none"></label><label>Senha inicial (mín. 8)<input name="pw" type="password" required autocomplete="new-password"></label></div>'+err+'<div class="row" style="margin-top:10px"><button class="b" type="submit">Cadastrar usuário</button></div></form></div>'}
+function viewConta(){
+  var msg=S.msg?'<div class="ok">'+esc(S.msg)+'</div>':'',err=S.authErr?'<div class="err">'+esc(S.authErr)+'</div>':'';
+  return '<div class="card" style="max-width:420px"><h2>Minha conta</h2><p class="note">'+esc(S.user.nome)+' · login <code>'+esc(S.user.login)+'</code> · '+(isM()?'Master':'Usuário')+'</p><form id="f-pw"><label>Senha atual<input name="cur" type="password" required autocomplete="current-password"></label><label>Nova senha (mín. 8)<input name="pw" type="password" required autocomplete="new-password"></label><label>Repetir nova senha<input name="pw2" type="password" required autocomplete="new-password"></label>'+msg+err+'<div class="row" style="margin-top:10px"><button class="b" type="submit">Alterar senha</button></div></form></div>'}
+
+// ---------- render ----------
+function render(){charts={};userbar();var m=document.getElementById('main'),h='';
+  if(!S.user){document.getElementById('nav').innerHTML='';m.innerHTML=viewAuth();return}
+  nav();
+  if(S.tab==='carteira')h=viewCarteira();else if(S.tab==='empresas')h=viewEmpresas();else if(S.tab==='simulacao')h=viewSimulacao();else if(S.tab==='premissas')h=viewPremissas();else if(S.tab==='usuarios'&&isM())h=viewUsuarios();else if(S.tab==='conta')h=viewConta();else h=viewMetodo();
+  m.innerHTML='<div class="printonly"><b>Matry Contabilidade — Simulador de Planejamento Tributário</b> · emitido em '+new Date().toLocaleString('pt-BR')+(S.user?' · '+esc(S.user.nome):'')+'<hr></div>'+h;bindCharts();var f=document.getElementById('file');if(f)f.addEventListener('change',function(){var fr=new FileReader();fr.onload=function(){document.getElementById('ta').value=fr.result};fr.readAsText(f.files[0])})}
+
+function readForm(){var e=Object.assign({},S.edit);document.querySelectorAll('#form [data-f]').forEach(function(i){e[i.getAttribute('data-f')]=i.value});return e}
+function numFix(e){['receita','folha','compras','despesas','pctB2B','pctFornSimples','aliqIcms','aliqIss','reducao','crescimento','patronal'].forEach(function(k){var v=parseBR(e[k]);e[k]=isFinite(v)?v:(k==='patronal'?S.params.patronalPadrao:0)});delete e.__novo;return e}
+function parseBR(v){if(typeof v==='number')return v;v=String(v==null?'':v).trim().replace(/[R$\s%]/g,'');if(v==='')return NaN;if(v.indexOf(',')>=0)v=v.replace(/\./g,'').replace(',','.');return parseFloat(v)}
+
+var ALIAS={razao:['razao','razao social','razão social','nome','empresa'],cnpj:['cnpj'],im:['im','inscricao municipal','inscrição municipal'],uf:['uf','estado'],municipio:['municipio','município','cidade'],ibge:['ibge','codigo ibge','código ibge'],regimeAtual:['regime','regimeatual','regime atual','regime tributario','regime tributário'],tipo:['atividade','tipo','tipo atividade'],receita:['receita','receita anual','rbt12','faturamento'],folha:['folha','folha anual'],compras:['compras','aquisicoes','aquisições'],despesas:['despesas'],pctB2B:['pctb2b','b2b','% b2b'],pctFornSimples:['pctfornsimples','fornecedores simples'],aliqIcms:['aliqicms','icms'],aliqIss:['aliqiss','iss'],reducao:['reducao','redução'],crescimento:['crescimento'],patronal:['patronal','encargos']};
+function normKey(h){h=h.trim().toLowerCase();for(var k in ALIAS)if(ALIAS[k].indexOf(h)>=0)return k;return null}
+function mapRegime(v){v=String(v||'').toLowerCase();return v.indexOf('simples')>=0?'simples':v.indexOf('presum')>=0?'presumido':v.indexOf('real')>=0?'real':'simples'}
+function mapTipo(v){v=String(v||'').toLowerCase();if(M.TIPOS[v])return v;if(v.indexOf('ind')>=0)return 'industria';if(v.indexOf('com')>=0)return 'comercio';if(v.indexOf('iv')>=0)return 'serv4';if(v.indexOf('fator')>=0||v.indexOf(' v')>=0)return 'servR';if(v.indexOf('serv')>=0)return 'serv3';return 'comercio'}
+function importText(t){t=t.trim();var out=[];
+  try{var j=JSON.parse(t);if(Array.isArray(j)){j.forEach(function(o){o.id=uid();out.push(o)});return out}}catch(e){}
+  var lines=t.split(/\r?\n/).filter(function(l){return l.trim()});if(lines.length<2)return out;
+  var del=(lines[0].split(';').length>lines[0].split(',').length)?';':',';var heads=lines[0].split(del).map(normKey);
+  lines.slice(1).forEach(function(l){var c=l.split(del),o={id:uid()};heads.forEach(function(k,i){if(k)o[k]=(c[i]||'').trim()});o.regimeAtual=mapRegime(o.regimeAtual);o.tipo=mapTipo(o.tipo);out.push(numFix(o))});return out}
+
+document.addEventListener('click',function(ev){
+  var t=ev.target.closest('[data-act]');if(!t)return;var a=t.getAttribute('data-act'),id=t.getAttribute('data-id');if(a==='selemp')return;ev.preventDefault();
+  var MA=['new','edit','save','del','loaddemo','imp','exp','doimp','copyexp','share','shareclose','shall','shnone','resetuser','cancelreset','toggleuser','deluser'];if(MA.indexOf(a)>=0&&!isM())return;S.msg='';S.authErr='';
+  if(a==='print'){window.print();return}else if(a==='tab'){S.tab=t.getAttribute('data-v');S.edit=null;S.modal=null;S.share=null;S.resetFor=null}
+  else if(a==='logout'){try{sessionStorage.removeItem(SID)}catch(e){}S.user=null;S.edit=null;S.modal=null;S.share=null;S.resetFor=null}
+  else if(a==='share'){S.share=id;S.edit=null;S.modal=null}
+  else if(a==='shareclose'){S.share=null}
+  else if(a==='shall'||a==='shnone'){var es=S.empresas.filter(function(x){return x.id===S.share})[0];if(es){es.compart=a==='shall'?S.users.filter(function(u){return u.role!=='master'&&u.ativo}).map(function(u){return u.id}):[];save()}}
+  else if(a==='resetuser'){S.resetFor=id}
+  else if(a==='cancelreset'){S.resetFor=null}
+  else if(a==='toggleuser'){var tu=S.users.filter(function(x){return x.id===id})[0];if(tu&&tu.role!=='master'){tu.ativo=!tu.ativo;save()}}
+  else if(a==='deluser'){if(S.confirmDel===id){S.users=S.users.filter(function(x){return x.id!==id});S.empresas.forEach(function(e){e.compart=(e.compart||[]).filter(function(x){return x!==id})});S.confirmDel=null;save()}else{S.confirmDel=id;t.textContent='Confirmar exclusão?';return}}
+  else if(a==='new'){S.share=null;S.edit={__novo:1,id:uid(),compart:[],razao:'',cnpj:'',im:'',uf:'RJ',municipio:'',ibge:'',regimeAtual:'simples',tipo:'comercio',receita:0,folha:0,compras:0,despesas:0,pctB2B:0,pctFornSimples:0,aliqIcms:18,aliqIss:5,reducao:0,crescimento:0,patronal:S.params.patronalPadrao}}
+  else if(a==='edit'){S.share=null;S.edit=Object.assign({},empById(id))}
+  else if(a==='cancel'){S.edit=null}
+  else if(a==='save'){var e=numFix(readForm());var i=S.empresas.findIndex(function(x){return x.id===e.id});if(i>=0)S.empresas[i]=e;else S.empresas.push(e);S.edit=null;save()}
+  else if(a==='del'){if(S.confirmDel===id){S.empresas=S.empresas.filter(function(x){return x.id!==id});S.confirmDel=null;save()}else{S.confirmDel=id;t.textContent='Confirmar?';return}}
+  else if(a==='open'){S.sel=id;S.tab='simulacao';save()}
+  else if(a==='loaddemo'){S.empresas=demo().map(function(e){e.compart=[];return e});save()}
+  else if(a==='imp'||a==='exp'){S.modal=a}
+  else if(a==='closemodal'){S.modal=null}
+  else if(a==='doimp'){var r=importText(document.getElementById('ta').value);if(r.length){r.forEach(function(o){o.compart=[]});S.empresas=S.empresas.concat(r);S.modal=null;save()}else{t.textContent='Nada reconhecido — verifique o formato';return}}
+  else if(a==='copyexp'){var ta=document.getElementById('ta');ta.select();try{navigator.clipboard.writeText(ta.value)}catch(e){}t.textContent='Copiado (ou selecione e copie)';return}
+  else if(a==='copyplan'||a==='payload'){var e2=empById(S.sel),s=sim(e2),txt=a==='payload'?JSON.stringify(M.payloadCalculadoraOficial(e2,2027,S.params),null,2):planoTexto(s);var o=document.getElementById('out');
+    o.innerHTML=(a==='payload'?'<p class="note">Modelo de operação (valor mensal médio, 2027) para <code>POST http://localhost:8080/api/calculadora/regime-geral</code> da Calculadora RTC rodando localmente. Ajuste NBS/NCM e cClassTrib da atividade antes de enviar.</p>':'')+'<textarea readonly id="outta">'+esc(txt)+'</textarea>';try{navigator.clipboard.writeText(txt)}catch(e){}document.getElementById('outta').select();return}
+  render();if(a==='edit'||a==='new'){var f=document.getElementById('form');if(f)f.scrollIntoView()}
+});
+document.addEventListener('change',function(ev){var t=ev.target;
+  if(t.hasAttribute('data-sh')){if(!isM())return;var es=S.empresas.filter(function(x){return x.id===S.share})[0];if(es){var c=es.compart||[],uid2=t.getAttribute('data-sh'),i=c.indexOf(uid2);if(t.checked&&i<0)c.push(uid2);if(!t.checked&&i>=0)c.splice(i,1);es.compart=c;save();render()}return}
+  if(t.getAttribute('data-p')&&!isM())return;
+  if(t.getAttribute('data-act')==='selemp'){S.sel=t.value;save();render();return}
+  var p=t.getAttribute('data-p');if(p){var v=t.value;if(p==='redutorCbs'||p==='excluirIcmsPisCofins')v=v==='1';else if(p==='cenario'){var c=M.CENARIOS[v];S.params.cenario=v;if(v!=='custom'){S.params.cbs=c.cbs;S.params.ibs=c.ibs}render();save();return}else{v=parseFloat(v);if(!isFinite(v))return;if(p==='cbs'||p==='ibs')S.params.cenario='custom'}S.params[p]=v;save();render()}
+});
+document.addEventListener('submit',function(ev){ev.preventDefault();var f=ev.target,id=f.id,v=function(n){return f.elements[n]?f.elements[n].value:''};
+  function fail(m){S.authErr=m;render()}
+  if(!(window.crypto&&crypto.subtle)){return fail('Este navegador não oferece criptografia (WebCrypto). Abra por HTTPS ou localhost.')}
+  if(id==='f-setup'){if(S.users.length)return;var nome=v('nome').trim(),login=v('login').trim().toLowerCase(),pw=v('pw'),e1=pwErr(pw,v('pw2'));if(!nome||!login)return fail('Informe nome e login.');if(e1)return fail(e1);
+    mkUser(nome,login,pw,'master').then(function(u){S.users=[u];if(!S.legacy&&!S.empresas.length)S.empresas=demo();S.empresas.forEach(function(e){e.compart=e.compart||[]});S.sel=S.empresas.length?S.empresas[0].id:null;S.legacy=false;startSession(u);save();render()})}
+  else if(id==='f-login'){var lk=lockLeft();if(lk)return fail('Muitas tentativas. Aguarde '+lk+' s.');var lg=v('login').trim().toLowerCase(),u=S.users.filter(function(x){return x.login===lg})[0];
+    var probe=u?checkPw(u,v('pw')):pbkdf(v('pw'),newSalt(),ITER).then(function(){return false});
+    probe.then(function(ok){if(ok&&u.ativo){okLogin();startSession(u);render()}else if(ok){fail('Usuário desativado. Fale com o master.')}else{failLogin();fail('Login ou senha inválidos.')}})}
+  else if(id==='f-newuser'&&isM()){var nome2=v('nome').trim(),login2=v('login').trim().toLowerCase(),pw3=v('pw'),e2=pwErr(pw3);if(!nome2||!login2)return fail('Informe nome e login.');if(e2)return fail(e2);if(S.users.some(function(x){return x.login===login2}))return fail('Já existe um usuário com esse login.');
+    mkUser(nome2,login2,pw3,'user').then(function(u){S.users.push(u);save();S.msg='Usuário “'+u.nome+'” cadastrado. Compartilhe empresas na aba Empresas.';S.authErr='';render()})}
+  else if(id==='f-reset'&&isM()){var tu=S.users.filter(function(x){return x.id===S.resetFor})[0],e3=pwErr(v('pw'));if(!tu)return;if(e3)return fail(e3);setPw(tu,v('pw')).then(function(){save();S.resetFor=null;S.msg='Senha de '+tu.nome+' redefinida.';render()})}
+  else if(id==='f-pw'&&S.user){var e4=pwErr(v('pw'),v('pw2'));if(e4)return fail(e4);checkPw(S.user,v('cur')).then(function(ok){if(!ok)return fail('Senha atual incorreta.');return setPw(S.user,v('pw')).then(function(){save();S.msg='Senha alterada.';S.authErr='';render()})})}
+});
+load();restoreSession();if(S.user&&!S.empresas.length&&isM()&&!S.empresas.length){}
+if(S.user&&S.sel==null&&vis().length)S.sel=vis()[0].id;
+render();
+})();
+</script>
+</body>
+</html>
