@@ -132,6 +132,7 @@ a{color:var(--accent)}.auth{max-width:380px;margin:7vh auto}.err{color:var(--bad
       receita: n(e.receita, 0), folha: n(e.folha, 0), compras: n(e.compras, 0), despesas: n(e.despesas, 0),
       pctB2B: n(e.pctB2B, 0), pctFornSimples: n(e.pctFornSimples, 0),
       aliqIcms: n(e.aliqIcms, 18), aliqIss: n(e.aliqIss, 5), reducao: n(e.reducao, 0),
+      issFixo: (e.issFixo === true || e.issFixo === 1 || e.issFixo === '1' || e.issFixo === 'true') ? 1 : 0, issFixoValor: n(e.issFixoValor, 0),
       crescimento: n(e.crescimento, 0), patronal: n(e.patronal, NaN)
     };
   }
@@ -174,17 +175,20 @@ a{color:var(--accent)}.auth{max-width:380px;margin:7vh auto}.err{color:var(--bad
       var das = r2(rev * ef.aliq), cppSN = (an.anexo === 'IV') ? cppFora : 0;
       var part = ANEXOS[an.anexo].part;
       var shPC = (part.pis + part.cofins) / 100, shIcmsIss = (part.icms + part.iss) / 100, shIpi = part.ipi / 100;
+      // ISS fixo (sociedades de profissionais): sai do DAS e é recolhido pelo valor informado; cai junto com o ISS na transição
+      var fx = (e.issFixo && !ci && part.iss > 0) ? { shIss: part.iss / 100, valor: r2(e.issFixoValor * t.fracIcmsIss) } : null;
+      var dasS = fx ? r2(das * (1 - fx.shIss)) : das;
       // parcela do DAS que equivale a IBS/CBS a partir de 2027 (crédito ao cliente B2B)
       var shIbsCbs = 0;
       if (y >= 2027) shIbsCbs = shPC + shIpi + shIcmsIss * (1 - t.fracIcmsIss);
       var credSN = r2(rev * (e.pctB2B / 100) * ef.aliq * shIbsCbs);
-      out.regimes.simples = { total: das + cppSN, das: das, cpp: cppSN, aliqEfetiva: ef.aliq, faixa: ef.faixa, creditoCliente: credSN, elegivel: true };
+      out.regimes.simples = { total: dasS + cppSN + (fx ? fx.valor : 0), das: dasS, issFixo: fx ? fx.valor : 0, cpp: cppSN, aliqEfetiva: ef.aliq, faixa: ef.faixa, creditoCliente: credSN, elegivel: true };
 
       // ---- Simples + regime regular de IBS/CBS (a partir de 2027) ----
       if (y >= 2027) {
         var excl = shPC + shIpi + shIcmsIss * (1 - t.fracIcmsIss);
-        var dasH = r2(das * (1 - excl)), reg = ibsCbsRegular(e, rev, compras, t, p);
-        out.regimes.hibrido = { total: dasH + cppSN + reg.cbs + reg.ibs, das: dasH, cpp: cppSN, cbs: reg.cbs, ibs: reg.ibs, elegivel: true };
+        var dasH = fx ? r2(das * (1 - shPC - shIpi - fx.shIss)) : r2(das * (1 - excl)), reg = ibsCbsRegular(e, rev, compras, t, p);
+        out.regimes.hibrido = { total: dasH + cppSN + reg.cbs + reg.ibs + (fx ? fx.valor : 0), das: dasH, issFixo: fx ? fx.valor : 0, cpp: cppSN, cbs: reg.cbs, ibs: reg.ibs, elegivel: true };
       }
     } else {
       out.regimes.simples = { total: null, elegivel: false, motivo: 'Receita acima de R$ 4,8 milhões' };
@@ -194,7 +198,7 @@ a{color:var(--accent)}.auth{max-width:380px;margin:7vh auto}.err{color:var(--bad
     // ---- tributos indiretos "antigos" (ICMS/ISS e PIS/Cofins) ----
     var icmsLiq = 0, issLiq = 0;
     if (ci) icmsLiq = (rev - compras) * (e.aliqIcms / 100) * t.fracIcmsIss;
-    else issLiq = rev * (e.aliqIss / 100) * t.fracIcmsIss;
+    else issLiq = e.issFixo ? e.issFixoValor * t.fracIcmsIss : rev * (e.aliqIss / 100) * t.fracIcmsIss;
     icmsLiq = r2(icmsLiq); issLiq = r2(issLiq);
     var icmsDeb = ci ? rev * e.aliqIcms / 100 : 0;
     var reg2 = (y >= 2026 && !t.pisCofins) ? ibsCbsRegular(e, rev, compras, t, p) : { cbs: 0, ibs: 0 };
@@ -389,17 +393,17 @@ function viewShare(id){
   return '<div class="card"><h2>Compartilhar “'+esc(e.razao)+'”</h2>'+(us.length?'<p class="note">Os usuários marcados veem esta empresa e podem simulá-la (somente leitura). O master sempre vê todas.</p>'+us.map(function(u){return '<label style="display:flex;gap:8px;align-items:center;font-size:14px;color:var(--ink)"><input type="checkbox" style="width:auto;margin:0" data-sh="'+u.id+'"'+((e.compart||[]).indexOf(u.id)>=0?' checked':'')+'> '+esc(u.nome)+' <span class="note">('+esc(u.login)+')</span></label>'}).join(''):'<p class="note">Não há usuários ativos além do master. Cadastre em <b>Usuários</b>.</p>')+'<div class="row" style="margin-top:10px"><button class="b sec sm" data-act="shall">Marcar todos</button><button class="b sec sm" data-act="shnone">Desmarcar todos</button><button class="b" data-act="shareclose">Concluir</button></div></div>'}
 
 function fld(k,lbl,v,type,extra){return '<label>'+lbl+'<input data-f="'+k+'" type="'+(type||'text')+'" value="'+esc(v==null?'':v)+'" '+(extra||'')+'></label>'}
-function viewForm(e){
+function viewForm(e){if(e.uf)ensureMunis(e.uf);
   var opt=function(o,cur){return Object.keys(o).map(function(k){return '<option value="'+k+'"'+(k===cur?' selected':'')+'>'+(o[k].nome||o[k].n)+'</option>'}).join('')};
   var regs={simples:REG.simples,presumido:REG.presumido,real:REG.real};
-  return '<div class="card" id="form"><h2>'+(e.__novo?'Nova empresa':'Editar empresa')+'</h2><div class="grid g4">'+
-  fld('razao','Razão social',e.razao)+fld('cnpj','CNPJ',e.cnpj)+fld('im','Inscrição municipal',e.im)+fld('uf','UF',e.uf,'text','maxlength="2"')+fld('municipio','Município',e.municipio)+fld('ibge','Código IBGE do município',e.ibge)+
+  return '<div class="card" id="form"><h2>'+(e.__novo?'Nova empresa':'Editar empresa')+'</h2><div id="cnpjmsg" class="note">'+(S.cnpjMsg?'<span class="'+(S.cnpjMsg.t==='err'?'err':'ok')+'">'+esc(S.cnpjMsg.m)+'</span>':'')+'</div><datalist id="dl-muni">'+((S.munis[String(e.uf||'').toUpperCase()]||[]).map(function(m){return '<option value="'+esc(m.nome)+'">'}).join(''))+'</datalist><div class="grid g4">'+
+  '<label>CNPJ (digite e pressione Buscar)<div class="row" style="flex-wrap:nowrap"><input data-f="cnpj" value="'+esc(e.cnpj||'')+'" inputmode="numeric" placeholder="00.000.000/0000-00" style="flex:1"><button class="b sm" type="button" data-act="buscarcnpj">Buscar</button></div></label>'+fld('razao','Razão social',e.razao)+fld('im','Inscrição municipal',e.im)+fld('uf','UF',e.uf,'text','maxlength="2"')+fld('municipio','Município (escolha na lista — o IBGE é preenchido sozinho)',e.municipio,'text','list="dl-muni" autocomplete="off"')+fld('ibge','Código IBGE do município',e.ibge)+
   '<label>Regime atual<select data-f="regimeAtual">'+opt(regs,e.regimeAtual)+'</select></label>'+
   '<label>Atividade<select data-f="tipo">'+opt(M.TIPOS,e.tipo)+'</select></label></div>'+
   '<h3>Dados econômicos (ano-base 2026, valores anuais em R$)</h3><div class="grid g4">'+
   fld('receita','Receita bruta anual (RBT12)',e.receita,'number')+fld('folha','Folha + pró-labore anual (sem encargos)',e.folha,'number')+fld('compras','Aquisições com direito a crédito (insumos, mercadorias, aluguel PJ…)',e.compras,'number')+fld('despesas','Outras despesas operacionais anuais',e.despesas,'number')+
   fld('pctB2B','% da receita vendida a clientes PJ (B2B)',e.pctB2B,'number')+fld('pctFornSimples','% das aquisições feitas de fornecedores do Simples',e.pctFornSimples,'number')+
-  fld('aliqIcms','Alíquota ICMS (%) — comércio/indústria',e.aliqIcms,'number','step="0.1"')+fld('aliqIss','Alíquota ISS (%) — serviços',e.aliqIss,'number','step="0.1"')+
+  fld('aliqIcms','Alíquota ICMS (%) — comércio/indústria',e.aliqIcms,'number','step="0.1"')+fld('aliqIss','Alíquota ISS (%) — serviços',e.aliqIss,'number','step="0.1"')+'<label>Forma de cobrança do ISS<select data-f="issFixo"><option value="0"'+(+e.issFixo===1?'':' selected')+'>Por alíquota sobre a receita</option><option value="1"'+(+e.issFixo===1?' selected':'')+'>ISS fixo (valor anual informado)</option></select></label>'+fld('issFixoValor','Valor do ISS fixo anual (R$) — soma dos profissionais',e.issFixoValor||0,'number','step="0.01"')+
   '<label>Redução de alíquota IBS/CBS<select data-f="reducao">'+[[0,'Sem redução (alíquota padrão)'],[30,'30% — profissões intelectuais regulamentadas'],[60,'60% — saúde, educação, etc.'],[100,'100% — alíquota zero / cesta básica']].map(function(o){return '<option value="'+o[0]+'"'+(+e.reducao===o[0]?' selected':'')+'>'+o[1]+'</option>'}).join('')+'</select></label>'+
   fld('crescimento','Crescimento anual da receita (%)',e.crescimento,'number','step="0.1"')+fld('patronal','Encargos patronais s/ folha (%) — CPP+RAT+terceiros',e.patronal,'number','step="0.1"')+'</div>'+
   '<div class="row" style="margin-top:12px"><button class="b" data-act="save">Salvar</button><button class="b sec" data-act="cancel">Cancelar</button></div></div>'}
@@ -510,10 +514,10 @@ function render(){charts={};userbar();var m=document.getElementById('main'),h=''
   m.innerHTML='<div class="printonly"><b>Matry Contabilidade — Simulador de Planejamento Tributário</b> · emitido em '+new Date().toLocaleString('pt-BR')+(S.user?' · '+esc(S.user.nome):'')+'<hr></div>'+h;bindCharts();var f=document.getElementById('file');if(f)f.addEventListener('change',function(){var fr=new FileReader();fr.onload=function(){document.getElementById('ta').value=fr.result};fr.readAsText(f.files[0])})}
 
 function readForm(){var e=Object.assign({},S.edit);document.querySelectorAll('#form [data-f]').forEach(function(i){e[i.getAttribute('data-f')]=i.value});return e}
-function numFix(e){['receita','folha','compras','despesas','pctB2B','pctFornSimples','aliqIcms','aliqIss','reducao','crescimento','patronal'].forEach(function(k){var v=parseBR(e[k]);e[k]=isFinite(v)?v:(k==='patronal'?S.params.patronalPadrao:0)});delete e.__novo;return e}
+function numFix(e){e.issFixo=(/^(1|sim|true|s)$/i.test(String(e.issFixo))?1:0);['receita','folha','compras','despesas','pctB2B','pctFornSimples','aliqIcms','aliqIss','issFixoValor','reducao','crescimento','patronal'].forEach(function(k){var v=parseBR(e[k]);e[k]=isFinite(v)?v:(k==='patronal'?S.params.patronalPadrao:0)});delete e.__novo;return e}
 function parseBR(v){if(typeof v==='number')return v;v=String(v==null?'':v).trim().replace(/[R$\s%]/g,'');if(v==='')return NaN;if(v.indexOf(',')>=0)v=v.replace(/\./g,'').replace(',','.');return parseFloat(v)}
 
-var ALIAS={razao:['razao','razao social','razão social','nome','empresa'],cnpj:['cnpj'],im:['im','inscricao municipal','inscrição municipal'],uf:['uf','estado'],municipio:['municipio','município','cidade'],ibge:['ibge','codigo ibge','código ibge'],regimeAtual:['regime','regimeatual','regime atual','regime tributario','regime tributário'],tipo:['atividade','tipo','tipo atividade'],receita:['receita','receita anual','rbt12','faturamento'],folha:['folha','folha anual'],compras:['compras','aquisicoes','aquisições'],despesas:['despesas'],pctB2B:['pctb2b','b2b','% b2b'],pctFornSimples:['pctfornsimples','fornecedores simples'],aliqIcms:['aliqicms','icms'],aliqIss:['aliqiss','iss'],reducao:['reducao','redução'],crescimento:['crescimento'],patronal:['patronal','encargos']};
+var ALIAS={razao:['razao','razao social','razão social','nome','empresa'],cnpj:['cnpj'],im:['im','inscricao municipal','inscrição municipal'],uf:['uf','estado'],municipio:['municipio','município','cidade'],ibge:['ibge','codigo ibge','código ibge'],regimeAtual:['regime','regimeatual','regime atual','regime tributario','regime tributário'],tipo:['atividade','tipo','tipo atividade'],receita:['receita','receita anual','rbt12','faturamento'],folha:['folha','folha anual'],compras:['compras','aquisicoes','aquisições'],despesas:['despesas'],pctB2B:['pctb2b','b2b','% b2b'],pctFornSimples:['pctfornsimples','fornecedores simples'],aliqIcms:['aliqicms','icms'],aliqIss:['aliqiss','iss'],issFixo:['issfixo','iss fixo'],issFixoValor:['issfixovalor','valor iss fixo','iss fixo valor'],reducao:['reducao','redução'],crescimento:['crescimento'],patronal:['patronal','encargos']};
 function normKey(h){h=h.trim().toLowerCase();for(var k in ALIAS)if(ALIAS[k].indexOf(h)>=0)return k;return null}
 function mapRegime(v){v=String(v||'').toLowerCase();return v.indexOf('simples')>=0?'simples':v.indexOf('presum')>=0?'presumido':v.indexOf('real')>=0?'real':'simples'}
 function mapTipo(v){v=String(v||'').toLowerCase();if(M.TIPOS[v])return v;if(v.indexOf('ind')>=0)return 'industria';if(v.indexOf('com')>=0)return 'comercio';if(v.indexOf('iv')>=0)return 'serv4';if(v.indexOf('fator')>=0||v.indexOf(' v')>=0)return 'servR';if(v.indexOf('serv')>=0)return 'serv3';return 'comercio'}
@@ -523,10 +527,40 @@ function importText(t){t=t.trim();var out=[];
   var del=(lines[0].split(';').length>lines[0].split(',').length)?';':',';var heads=lines[0].split(del).map(normKey);
   lines.slice(1).forEach(function(l){var c=l.split(del),o={id:uid()};heads.forEach(function(k,i){if(k)o[k]=(c[i]||'').trim()});o.regimeAtual=mapRegime(o.regimeAtual);o.tipo=mapTipo(o.tipo);out.push(numFix(o))});return out}
 
+var CNPJ_URL=function(d){return 'https://brasilapi.com.br/api/cnpj/v1/'+d},MUNI_URL=function(uf){return 'https://servicodados.ibge.gov.br/api/v1/localidades/estados/'+uf+'/municipios'};
+
+// ---------- busca de CNPJ e município/IBGE ----------
+S.munis={};S.mp={};S.cnpjMsg=null;
+function cnpjDigits(s){return String(s||'').replace(/\D/g,'')}
+function fmtCnpj(d){return d.length===14?d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/,'$1.$2.$3/$4-$5'):d}
+function cnpjOk(d){if(d.length!==14||/^(\d)\1+$/.test(d))return false;function dv(n){var p=n-7,s=0;for(var i=0;i<n;i++){s+=+d[i]*p--;if(p<2)p=9}var r=s%11;return r<2?0:11-r}return dv(12)===+d[12]&&dv(13)===+d[13]}
+function norm(s){return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim()}
+function titulo(s){return String(s||'').toLowerCase().replace(/(^|\s)(\S)/g,function(m,a,b){return a+b.toUpperCase()}).replace(/\s(De|Da|Do|Das|Dos|E)\s/g,function(m){return m.toLowerCase()})}
+function fq(k){return document.querySelector('#form [data-f='+k+']')}
+function ensureMunis(uf){uf=String(uf||'').toUpperCase();if(uf.length!==2)return Promise.resolve();if(S.mp[uf])return S.mp[uf];
+  S.mp[uf]=fetch(MUNI_URL(uf),{credentials:'same-origin'}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(l){S.munis[uf]=l.map(function(m){return {id:String(m.id),nome:m.nome}}).sort(function(a,b){return a.nome.localeCompare(b.nome,'pt-BR')});aplicaMuni()}).catch(function(){delete S.mp[uf]});return S.mp[uf]}
+function achaMuni(uf,nome){var l=S.munis[String(uf||'').toUpperCase()]||[],n=norm(nome);return l.filter(function(m){return norm(m.nome)===n})[0]}
+function aplicaMuni(){var uf=fq('uf'),mu=fq('municipio'),ib=fq('ibge');if(!uf||!mu||!ib)return;var l=S.munis[uf.value.toUpperCase()];if(!l)return;var dl=document.getElementById('dl-muni');if(dl)dl.innerHTML=l.map(function(m){return '<option value="'+esc(m.nome)+'">'}).join('');var m=achaMuni(uf.value,mu.value);if(m){mu.value=m.nome;ib.value=m.id}}
+function cnpjMsg(t,m){S.cnpjMsg={t:t,m:m};var el=document.getElementById('cnpjmsg');if(el)el.innerHTML=m?'<span class="'+(t==='err'?'err':'ok')+'">'+esc(m)+'</span>':''}
+function tipoPorCnae(c){var d=String(c||'').padStart(7,'0').slice(0,2),n=+d;if(n>=45&&n<=47)return 'comercio';if(n>=5&&n<=33)return 'industria';if(n>=41&&n<=43)return 'serv4';return null}
+function buscaCnpj(){var inp=fq('cnpj');if(!inp)return;var d=cnpjDigits(inp.value);
+  if(!cnpjOk(d)){cnpjMsg('err','CNPJ inválido — confira os 14 dígitos.');return}
+  inp.value=fmtCnpj(d);cnpjMsg('ok','Buscando dados do CNPJ…');
+  fetch(CNPJ_URL(d),{credentials:'same-origin'}).then(function(r){return r.json().catch(function(){return {}}).then(function(j){if(!r.ok)throw new Error(j.erro||j.message||(r.status===404?'CNPJ não encontrado na base da Receita.':'Consulta indisponível agora ('+r.status+'). Preencha manualmente.'));return j})})
+  .then(function(j){if(!S.edit)return;var e=readForm();e.cnpj=fmtCnpj(d);
+    if(j.razao_social)e.razao=j.razao_social;
+    if(j.uf)e.uf=j.uf;if(j.municipio)e.municipio=titulo(j.municipio);if(j.codigo_municipio_ibge)e.ibge=String(j.codigo_municipio_ibge);
+    if(j.opcao_pelo_simples===true)e.regimeAtual='simples';else if(e.regimeAtual==='simples')e.regimeAtual='presumido';
+    var tp=tipoPorCnae(j.cnae_fiscal);if(tp)e.tipo=tp;else if(e.tipo==='comercio'||e.tipo==='industria'||e.tipo==='serv4')e.tipo='servR';
+    S.edit=e;var sit=j.descricao_situacao_cadastral?' · situação: '+j.descricao_situacao_cadastral:'';
+    S.cnpjMsg={t:(j.descricao_situacao_cadastral&&!/ativa/i.test(j.descricao_situacao_cadastral))?'err':'ok',m:'Dados carregados'+sit+' · CNAE '+(j.cnae_fiscal||'?')+(j.cnae_fiscal_descricao?' — '+j.cnae_fiscal_descricao:'')+'. Confira regime, atividade e valores.'};
+    render();ensureMunis(e.uf).then(aplicaMuni)})
+  .catch(function(e){cnpjMsg('err',e.message||'Falha na consulta.')})}
+
 document.addEventListener('click',function(ev){
   var t=ev.target.closest('[data-act]');if(!t)return;var a=t.getAttribute('data-act'),id=t.getAttribute('data-id');if(a==='selemp')return;ev.preventDefault();
   var MA=['new','edit','save','del','loaddemo','imp','exp','doimp','copyexp','share','shareclose','shall','shnone','resetuser','cancelreset','toggleuser','deluser'];if(MA.indexOf(a)>=0&&!isM())return;S.msg='';S.authErr='';
-  if(a==='print'){window.print();return}else if(a==='tab'){S.tab=t.getAttribute('data-v');S.edit=null;S.modal=null;S.share=null;S.resetFor=null}
+  if(a==='buscarcnpj'){buscaCnpj();return}else if(a==='print'){window.print();return}else if(a==='tab'){S.tab=t.getAttribute('data-v');S.edit=null;S.modal=null;S.share=null;S.resetFor=null}
   else if(a==='logout'){try{sessionStorage.removeItem(SID)}catch(e){}S.user=null;S.edit=null;S.modal=null;S.share=null;S.resetFor=null}
   else if(a==='share'){S.share=id;S.edit=null;S.modal=null}
   else if(a==='shareclose'){S.share=null}
@@ -535,7 +569,7 @@ document.addEventListener('click',function(ev){
   else if(a==='cancelreset'){S.resetFor=null}
   else if(a==='toggleuser'){var tu=S.users.filter(function(x){return x.id===id})[0];if(tu&&tu.role!=='master'){tu.ativo=!tu.ativo;save()}}
   else if(a==='deluser'){if(S.confirmDel===id){S.users=S.users.filter(function(x){return x.id!==id});S.empresas.forEach(function(e){e.compart=(e.compart||[]).filter(function(x){return x!==id})});S.confirmDel=null;save()}else{S.confirmDel=id;t.textContent='Confirmar exclusão?';return}}
-  else if(a==='new'){S.share=null;S.edit={__novo:1,id:uid(),compart:[],razao:'',cnpj:'',im:'',uf:'RJ',municipio:'',ibge:'',regimeAtual:'simples',tipo:'comercio',receita:0,folha:0,compras:0,despesas:0,pctB2B:0,pctFornSimples:0,aliqIcms:18,aliqIss:5,reducao:0,crescimento:0,patronal:S.params.patronalPadrao}}
+  else if(a==='new'){S.share=null;S.edit={__novo:1,id:uid(),compart:[],razao:'',cnpj:'',im:'',uf:'RJ',municipio:'',ibge:'',regimeAtual:'simples',tipo:'comercio',receita:0,folha:0,compras:0,despesas:0,pctB2B:0,pctFornSimples:0,aliqIcms:18,aliqIss:5,issFixo:0,issFixoValor:0,reducao:0,crescimento:0,patronal:S.params.patronalPadrao}}
   else if(a==='edit'){S.share=null;S.edit=Object.assign({},empById(id))}
   else if(a==='cancel'){S.edit=null}
   else if(a==='save'){var e=numFix(readForm());var i=S.empresas.findIndex(function(x){return x.id===e.id});if(i>=0)S.empresas[i]=e;else S.empresas.push(e);S.edit=null;save()}
@@ -550,7 +584,11 @@ document.addEventListener('click',function(ev){
     o.innerHTML=(a==='payload'?'<p class="note">Modelo de operação (valor mensal médio, 2027) para <code>POST http://localhost:8080/api/calculadora/regime-geral</code> da Calculadora RTC rodando localmente. Ajuste NBS/NCM e cClassTrib da atividade antes de enviar.</p>':'')+'<textarea readonly id="outta">'+esc(txt)+'</textarea>';try{navigator.clipboard.writeText(txt)}catch(e){}document.getElementById('outta').select();return}
   render();if(a==='edit'||a==='new'){var f=document.getElementById('form');if(f)f.scrollIntoView()}
 });
-document.addEventListener('change',function(ev){var t=ev.target;
+document.addEventListener('change',function(ev){var t=ev.target;var df=t.getAttribute&&t.getAttribute('data-f');
+  if(df==='uf'){t.value=t.value.toUpperCase();ensureMunis(t.value).then(aplicaMuni);aplicaMuni();return}
+  if(df==='municipio'){aplicaMuni();return}
+  if(df==='cnpj'){var d=cnpjDigits(t.value);if(d.length===14){t.value=fmtCnpj(d);var rz=fq('razao');if(cnpjOk(d)&&rz&&!rz.value.trim())buscaCnpj();else if(!cnpjOk(d))cnpjMsg('err','CNPJ inválido — confira os 14 dígitos.')}return}
+  if(df){return}
   if(t.hasAttribute('data-sh')){if(!isM())return;var es=S.empresas.filter(function(x){return x.id===S.share})[0];if(es){var c=es.compart||[],uid2=t.getAttribute('data-sh'),i=c.indexOf(uid2);if(t.checked&&i<0)c.push(uid2);if(!t.checked&&i>=0)c.splice(i,1);es.compart=c;save();render()}return}
   if(t.getAttribute('data-p')&&!isM())return;
   if(t.getAttribute('data-act')==='selemp'){S.sel=t.value;save();render();return}
