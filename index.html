@@ -139,7 +139,7 @@ a{color:var(--accent)}.auth{max-width:380px;margin:7vh auto}.err{color:var(--bad
       hist: hist, usaHist: usaHist, receita: usaHist ? hr : n(e.receita, 0), folha: usaHist ? hf : n(e.folha, 0), compras: n(e.compras, 0), despesas: n(e.despesas, 0),
       pctB2B: n(e.pctB2B, 0), pctFornSimples: n(e.pctFornSimples, 0),
       aliqIcms: n(e.aliqIcms, 18), aliqIss: n(e.aliqIss, 5), reducao: n(e.reducao, 0),
-      issFixo: (e.issFixo === true || e.issFixo === 1 || e.issFixo === '1' || e.issFixo === 'true') ? 1 : 0, issFixoValor: n(e.issFixoValor, 0),
+      issFixo: (e.issFixo === true || e.issFixo === 1 || e.issFixo === '1' || e.issFixo === 'true') ? 1 : 0, issFixoValor: n(e.issFixoValor, 0), issFixoAnual: n(e.issFixoValor, 0) * 12, // valor informado é MENSAL
       crescimento: n(e.crescimento, 0), patronal: n(e.patronal, NaN)
     };
   }
@@ -183,7 +183,7 @@ a{color:var(--accent)}.auth{max-width:380px;margin:7vh auto}.err{color:var(--bad
       var part = ANEXOS[an.anexo].part;
       var shPC = (part.pis + part.cofins) / 100, shIcmsIss = (part.icms + part.iss) / 100, shIpi = part.ipi / 100;
       // ISS fixo (sociedades de profissionais): sai do DAS e é recolhido pelo valor informado; cai junto com o ISS na transição
-      var fx = (e.issFixo && !ci && part.iss > 0) ? { shIss: part.iss / 100, valor: r2(e.issFixoValor * t.fracIcmsIss) } : null;
+      var fx = (e.issFixo && !ci && part.iss > 0) ? { shIss: part.iss / 100, valor: r2(e.issFixoAnual * t.fracIcmsIss) } : null;
       var dasS = fx ? r2(das * (1 - fx.shIss)) : das;
       // parcela do DAS que equivale a IBS/CBS a partir de 2027 (crédito ao cliente B2B)
       var shIbsCbs = 0;
@@ -205,7 +205,7 @@ a{color:var(--accent)}.auth{max-width:380px;margin:7vh auto}.err{color:var(--bad
     // ---- tributos indiretos "antigos" (ICMS/ISS e PIS/Cofins) ----
     var icmsLiq = 0, issLiq = 0;
     if (ci) icmsLiq = (rev - compras) * (e.aliqIcms / 100) * t.fracIcmsIss;
-    else issLiq = e.issFixo ? e.issFixoValor * t.fracIcmsIss : rev * (e.aliqIss / 100) * t.fracIcmsIss;
+    else issLiq = e.issFixo ? e.issFixoAnual * t.fracIcmsIss : rev * (e.aliqIss / 100) * t.fracIcmsIss;
     icmsLiq = r2(icmsLiq); issLiq = r2(issLiq);
     var icmsDeb = ci ? rev * e.aliqIcms / 100 : 0;
     var reg2 = (y >= 2026 && !t.pisCofins) ? ibsCbsRegular(e, rev, compras, t, p) : { cbs: 0, ibs: 0 };
@@ -414,7 +414,7 @@ function viewForm(e){if(e.uf)ensureMunis(e.uf);
   '<h3>Dados econômicos (ano-base 2026, valores anuais em R$)</h3><div class="grid g4">'+
   fld('receita','Receita bruta anual (RBT12)',e.receita,'number')+fld('folha','Folha + pró-labore anual (sem encargos)',e.folha,'number')+fld('compras','Aquisições com direito a crédito (insumos, mercadorias, aluguel PJ…)',e.compras,'number')+fld('despesas','Outras despesas operacionais anuais',e.despesas,'number')+
   fld('pctB2B','% da receita vendida a clientes PJ (B2B)',e.pctB2B,'number')+fld('pctFornSimples','% das aquisições feitas de fornecedores do Simples',e.pctFornSimples,'number')+
-  fld('aliqIcms','Alíquota ICMS (%) — comércio/indústria',e.aliqIcms,'number','step="0.1"')+fld('aliqIss','Alíquota ISS (%) — serviços',e.aliqIss,'number','step="0.1"')+'<label>Forma de cobrança do ISS<select data-f="issFixo"><option value="0"'+(+e.issFixo===1?'':' selected')+'>Por alíquota sobre a receita</option><option value="1"'+(+e.issFixo===1?' selected':'')+'>ISS fixo (valor anual informado)</option></select></label>'+fld('issFixoValor','Valor do ISS fixo anual (R$) — soma dos profissionais',e.issFixoValor||0,'number','step="0.01"')+
+  fld('aliqIcms','Alíquota ICMS (%) — comércio/indústria',e.aliqIcms,'number','step="0.1"')+fld('aliqIss','Alíquota ISS (%) — serviços',e.aliqIss,'number','step="0.1"')+'<label>Forma de cobrança do ISS<select data-f="issFixo"><option value="0"'+(+e.issFixo===1?'':' selected')+'>Por alíquota sobre a receita</option><option value="1"'+(+e.issFixo===1?' selected':'')+'>ISS fixo (valor mensal informado)</option></select></label>'+fld('issFixoValor','Valor do ISS fixo MENSAL (R$) — soma dos profissionais',e.issFixoValor||0,'number','step="0.01"')+
   '<label>Redução de alíquota IBS/CBS<select data-f="reducao">'+[[0,'Sem redução (alíquota padrão)'],[30,'30% — profissões intelectuais regulamentadas'],[60,'60% — saúde, educação, etc.'],[100,'100% — alíquota zero / cesta básica']].map(function(o){return '<option value="'+o[0]+'"'+(+e.reducao===o[0]?' selected':'')+'>'+o[1]+'</option>'}).join('')+'</select></label>'+
   fld('crescimento','Crescimento anual da receita (%)',e.crescimento,'number','step="0.1"')+fld('patronal','Encargos patronais s/ folha (%) — CPP+RAT+terceiros',e.patronal,'number','step="0.1"')+'</div>'+
   '<div class="row" style="margin-top:12px"><button class="b" data-act="save">Salvar</button><button class="b sec" data-act="cancel">Cancelar</button></div></div>'}
